@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd">
+
+    <transition name="viewPageBlock">
+        <default-response url="../ViewPageBlock"></default-response>
+    </transition>
+    
+    <widgets>
+        <form-list name="PageBlockReleaseList" list="pageBlockReleaseList" use-widget="aggrid" auto-stretch="true">
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceApplView" list="pageBlockReleaseList">
+                <search-form-inputs default-order-by="-lastUpdatedStamp"/>
+                <econdition field-name="phaseStatusId" value="VtRelease"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <row-actions>
+                <if condition="enabled == 'Y'">
+                    <set field="enabledText" value="启用"/>
+                    <set field="enabledCond" from="false"/>
+                    <set field="disabledCond" from="true"/>
+                    <else>
+                        <set field="enabledText" value="停用"/>
+                        <set field="enabledCond" from="true"/>
+                        <set field="disabledCond" from="false"/>
+                    </else>
+                </if>
+                <if condition="isIssued == 'Y'">
+                    <set field="isIssuedText" value="已发布"/>
+                    <else>
+                        <set field="isIssuedText" value="未发布"/>
+                    </else>
+                </if>
+            </row-actions>
+            <field name="tableIndex" from="pageBlockReleaseList_index+1" show-checkbox="true" width="120">
+                <default-field title="序号">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="blockId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="name">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块名称">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="blockKey">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块唯一标识">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceNames">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="servicePseudoIds">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务编码">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceUrls" width="200">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务URL">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="启用"/>
+                        <option key="N" text="停用"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="启用状态">
+                    <display text="${enabledText}"/>
+                </default-field>
+            </field>
+            <field name="isIssued">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="已发布"/>
+                        <option key="N" text="未发布"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="发布状态">
+                    <display text="${isIssuedText}"/>
+                </default-field>
+            </field>
+            <field name="createdStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="创建时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="createdUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="创建人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="编辑时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="编辑人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationButton" is-action-column="true" width="100">
+                <header-field>
+                    <reset/>
+                </header-field>
+                <default-field title="操作">
+                    <link url="viewPageBlock" link-parameters="{'blockId':'blockId'}" text="查看" btn-type="primary"/>
+                </default-field>
+            </field>
+        </form-list>
+    </widgets>
+</screen>

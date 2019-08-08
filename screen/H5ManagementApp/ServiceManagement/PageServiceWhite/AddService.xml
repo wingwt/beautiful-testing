@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false" standalone="true">
+
+
+    <transition name="addService">
+        <actions>
+            <service-call name="moqui.h5Management.H5ManagementServices.add#BizService" in-map="context"/>
+            <log message="context_out_ ${context}"/>
+        </actions>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="getServiceType">
+        <actions>
+            <entity-find entity-name="moqui.basic.Enumeration" list="serviceTypeList">
+                <econdition field-name="enumTypeId" value="ServiceType"/>
+                <econdition field-name="relatedEnumId" from="industryEnumId"/>
+                <econdition field-name="enabled" value="Y"/>
+                <select-field field-name="enumId,description"/>
+            </entity-find>
+            <script>ec.web.sendJsonResponse(serviceTypeList)</script>
+        </actions>
+        <default-response></default-response>
+    </transition>
+
+    <transition name="getVendorPartyDataJson">
+        <parameter name="pageNumber"/>
+        <parameter name="pageSize"/>
+        <parameter name="searchField"/>
+        <parameter name="searchKey"/>
+        <parameter name="searchValue"/>
+
+        <actions>
+            <if condition="!pageSize">
+                <set field="pageSize" value="20"/>
+            </if>
+            <if condition="!pageNumber">
+                <set field="pageNumber" value="1"/>
+            </if>
+            <if condition="searchKey">
+                <then>
+                    <entity-find-count entity-name="mantle.mfexcel.old.TbPublicMainRelease"
+                                       count-field="publicMainReleaseCount" cache="true">
+                        <econdition field-name="${searchKey}" operator="in" from="searchValue.split(',') as List"/>
+                    </entity-find-count>
+                    <entity-find entity-name="mantle.mfexcel.old.TbPublicMainRelease" list="publicMainReleaseLs"
+                                 cache="true" limit="20" offset="(pageNumber-1)*pageSize">
+                        <econdition field-name="${searchKey}" operator="in" from="searchValue.split(',') as List"/>
+                        <order-by field-name="pubName"/>
+                    </entity-find>
+                </then>
+                <else-if condition="searchField">
+                    <entity-find-count entity-name="mantle.mfexcel.old.TbPublicMainRelease"
+                                       count-field="publicMainReleaseCount" cache="true">
+                        <econditions combine="or">
+                            <econdition field-name="pubName" value="${'%'+searchField+'%'}" operator="like"/>
+                            <econdition field-name="id" value="${'%'+searchField+'%'}" operator="like"/>
+                        </econditions>
+                    </entity-find-count>
+                    <entity-find entity-name="mantle.mfexcel.old.TbPublicMainRelease" list="publicMainReleaseLs"
+                                 cache="true" limit="20" offset="(pageNumber-1)*pageSize">
+                        <econditions combine="or">
+                            <econdition field-name="pubName" value="${'%'+searchField+'%'}" operator="like"/>
+                            <econdition field-name="id" value="${'%'+searchField+'%'}" operator="like"/>
+                        </econditions>
+                        <order-by field-name="pubName"/>
+                    </entity-find>
+                </else-if>
+                <else>
+                    <entity-find-count entity-name="mantle.mfexcel.old.TbPublicMainRelease"
+                                       count-field="publicMainReleaseCount" cache="true">
+                    </entity-find-count>
+                    <entity-find entity-name="mantle.mfexcel.old.TbPublicMainRelease" list="publicMainReleaseLs"
+                                 cache="true" limit="20" offset="(pageNumber-1)*pageSize">
+                        <order-by field-name="pubName"/>
+                    </entity-find>
+                </else>
+            </if>
+
+            <set field="showPubNameList" from="[]"/>
+            <iterate list="publicMainReleaseLs" entry="pubNamePackage">
+                <set field="showPubNameMap" from="[:]"/>
+                <set field="showPubNameMap.id" from="pubNamePackage.id"/>
+                <set field="showPubNameMap.pubName" from="pubNamePackage.pubName"/>
+                <script>
+                    showPubNameList.add(showPubNameMap)
+                </script>
+            </iterate>
+
+            <set field="result"
+                 from="['values':['gridResult':['totalRow':publicMainReleaseCount,'list':showPubNameList]]]"/>
+            <script>
+                ec.web.sendJsonResponse(result)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <form-single name="BizService" map="bizService" transition="addService">
+            <field name="serviceDataTypeEnumId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="name">
+                <default-field title="服务名称">
+                    <text-line validate="required" validate-msg="服务名称为必填" maxlength="40"/>
+                </default-field>
+            </field>
+            <field name="industryEnumId">
+                <default-field title="服务行业">
+                    <drop-down allow-empty="true" validate="required" validate-msg="服务行业为必填" >
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="Industry"/>
+                                <econdition field-name="enabled" value="Y"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="serviceTypeEnumId">
+                <default-field title="服务类别">
+                    <drop-down allow-empty="true" validate="required" validate-msg="服务类别为必填" >
+                        <dynamic-options transition="getServiceType" value-field="enumId" label-field="description">
+                            <depends-on field="industryEnumId"/>
+                        </dynamic-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="vendorPartyId">
+                <default-field title="服务提供商">
+                    <drop-table placeholder="请选择服务提供商" value-field="pubName" search-field="searchField"
+                                key-field="id" transition="getVendorPartyDataJson"
+                                column="[{title:'id',data:'id'},{title:'服务提供商',data:'pubName'}]"
+                                page-size="20" pagination="true"
+                                validate="required" validate-msg="服务提供商为必填"/>
+                </default-field>
+            </field>
+            <field name="cooperationTypeEnumId">
+                <default-field title="合作类型">
+                    <drop-down allow-empty="true" validate="required" validate-msg="合作类型为必填">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="CooperationType"/>
+                                <econdition field-name="enabled" value="Y"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="businessTypeEnumId">
+                <default-field title="商业类型">
+                    <drop-down allow-empty="true" validate="required" validate-msg="商业类型为必填">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="BusinessType"/>
+                                <econdition field-name="enabled" value="Y"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="settlementMethodEnumId">
+                <default-field title="结算方式">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="SettlementMethod"/>
+                                <econdition field-name="enabled" value="Y"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="settlementOrder">
+                <default-field title="结算报价">
+                    <text-line maxlength="40"/>
+                </default-field>
+            </field>
+            <field name="marketingTypeEnumId">
+                <default-field title="营销类型">
+                    <drop-down allow-empty="true"  >
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="MarketingType"/>
+                                <econdition field-name="enabled" value="Y"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="remark">
+                <default-field title="备注">
+                    <text-line maxlength="40"/>
+                </default-field>
+            </field>
+            <field name="url">
+                <default-field title="服务url">
+                    <text-line />
+                </default-field>
+            </field>
+            <field name="appUrl">
+                <default-field title="默认下载链接">
+                    <text-line />
+                </default-field>
+            </field>
+            <field name="appPackage">
+                <default-field title="App包名">
+                    <text-line  maxlength="200"/>
+                </default-field>
+            </field>
+            <field name="subButton">
+                <default-field title="保存">
+                    <submit/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-ref name="name"/>
+                <field-ref name="industryEnumId"/>
+                <field-ref name="serviceTypeEnumId"/>
+                <field-ref name="vendorPartyId"/>
+                <field-ref name="cooperationTypeEnumId"/>
+                <field-ref name="businessTypeEnumId"/>
+                <field-ref name="settlementMethodEnumId"/>
+                <field-ref name="settlementOrder"/>
+                <field-ref name="marketingTypeEnumId"/>
+                <field-ref name="remark"/>
+                <field-ref name="serviceDataTypeEnumId"/>
+                <field-tabs id="type" type="card" default-pane="APP" size="small"
+                            set-field="serviceDataTypeEnumId">
+                    <field-tab-pane label="APP" name="APP">
+                        <field-ref name="appPackage"/>
+                        <field-ref name="appUrl"/>
+                    </field-tab-pane>
+                    <field-tab-pane label="URL" name="URL">
+                        <field-ref name="url"/>
+                    </field-tab-pane>
+                </field-tabs>
+<!--                <field-row>-->
+                    <field-ref name="subButton" />
+<!--                </field-row>-->
+            </field-layout>
+        </form-single>
+    </widgets>
+</screen>

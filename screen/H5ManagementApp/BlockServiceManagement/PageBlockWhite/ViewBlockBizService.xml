@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false" standalone="true">
+
+    <parameter name="blockId" required="true"/>
+    <parameter name="serviceId" required="true"/>
+    <parameter name="serviceDataTypeEnumId" required="true"/>
+
+    <actions>
+        <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+            <field-map field-name="blockId" from="blockId"/>
+            <field-map field-name="serviceId" from="serviceId"/>
+            <field-map field-name="thruDate" from="null"/>
+        </entity-find-one>
+    </actions>
+
+    <widgets>
+        <section name="sectionUrl">
+            <condition>
+                <compare field="serviceDataTypeEnumId" value="URL"/>
+            </condition>
+            <widgets>
+                <form-single name="AddBlockUrlBizService" map="pageBlockService">
+                    <field name="serviceId">
+                        <default-field title="Url服务">
+                            <display-entity entity-name="mantle.mfexcel.h5page.BizService" text="${name}" key-field-name="serviceId"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceTitle">
+                        <default-field title="服务标题">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="serviceDesc">
+                        <default-field title="服务描述">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="serviceLogo">
+                        <default-field title="服务图片">
+                            <image url="${serviceLogo}" url-type="screen" width="150" height="150"/>
+                        </default-field>
+                    </field>
+                    <field name="expansion">
+                        <default-field title="扩展参数">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="actionTypeEnumId">
+                        <default-field title="动作类型">
+                            <display-entity entity-name="moqui.basic.Enumeration" text="${description}" key-field-name="enumId"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="sectionApp">
+            <condition>
+                <compare field="serviceDataTypeEnumId" value="APP"/>
+            </condition>
+            <widgets>
+                <form-single name="AddBlockAppBizService" map="pageBlockService">
+                    <field name="serviceId">
+                        <default-field title="App服务" >
+                            <display-entity entity-name="mantle.mfexcel.h5page.BizService" text="${name}" key-field-name="serviceId"/>
+                        </default-field>
+                    </field>
+                    <field name="appName">
+                        <default-field title="App名称">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="appDownloadDesc">
+                        <default-field title="App下载文本">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="appButtonDesc">
+                        <default-field title="App按钮文本">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="serviceLogo">
+                        <default-field title="App图片">
+                            <image url="${serviceLogo}" url-type="screen" width="150" height="150"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceTitle">
+                        <default-field title="服务标题">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="serviceDesc">
+                        <default-field title="服务描述">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="backupUrl">
+                        <default-field title="备用链接">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="expansion">
+                        <default-field title="扩展参数">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="actionTypeEnumId">
+                        <default-field title="动作类型">
+                            <display-entity entity-name="moqui.basic.Enumeration" text="${description}" key-field-name="enumId"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

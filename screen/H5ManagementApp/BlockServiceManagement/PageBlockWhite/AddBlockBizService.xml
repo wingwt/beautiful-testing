@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false" standalone="true">
+
+    <parameter name="blockId" required="true"/>
+    <parameter name="serviceId"/>
+    <parameter name="serviceDataTypeEnumId" required="true"/>
+
+    <transition-include name="getBizServiceDataJson" location="component://H5-service-management/template/PageBlockInfo.xml"/>
+
+    <transition name="addBlockBizService">
+        <actions>
+            <set field="contentFile" from="context.serviceLogo"/>
+            <service-call name="moqui.h5Management.H5ManagementServices.add#BlockBizService" in-map="context" out-map="context"/>
+        </actions>
+        <default-response url="../EditPageBlock"></default-response>
+    </transition>
+
+    <transition name="displayImageByLocation" read-only="true">
+        <parameter name="serviceLogo"/>
+        <actions>
+            <script>ec.web.sendResourceResponse(serviceLogo)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions>
+        <set field="isUpdated" from="false"/>
+        <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+            <field-map field-name="blockId" from="blockId"/>
+            <field-map field-name="serviceId" from="serviceId"/>
+            <field-map field-name="thruDate" from="null"/>
+        </entity-find-one>
+        <if condition="pageBlockService">
+            <set field="isUpdated" from="true"/>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                <field-map field-name="serviceId" from="pageBlockService.serviceId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="moqui.basic.Enumeration" value-field="enumeration">
+                <field-map field-name="enumId" from="pageBlockService.actionTypeEnumId"/>
+            </entity-find-one>
+        </if>
+        <entity-find entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" list="linkedServiceList">
+            <econdition field-name="blockId" from="blockId"/>
+            <econdition field-name="thruDate" operator="is-null"/>
+        </entity-find>
+        <if condition="linkedServiceList != null &amp;&amp; linkedServiceList.size() > 0">
+            <set field="linkedServiceIdList" from="linkedServiceList*.serviceId"/>
+        </if>
+        <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="existServiceList">
+            <econdition field-name="blockId" from="blockId"/>
+            <econdition field-name="thruDate" operator="is-null"/>
+        </entity-find>
+        <if condition="existServiceList != null &amp;&amp; existServiceList.size() > 0">
+            <set field="existServiceIdList" from="existServiceList*.serviceId"/>
+        </if>
+        <set field="excludeServiceIdSet" from="new HashSet()"/>
+        <if condition="linkedServiceIdList"><script>excludeServiceIdSet.addAll(linkedServiceIdList)</script></if>
+        <if condition="existServiceIdList"><script>excludeServiceIdSet.addAll(existServiceIdList)</script></if>
+        <set field="excludeServiceIds" from="excludeServiceIdSet.join(',')"/>
+    </actions>
+
+    <widgets>
+        <section name="sectionUrl">
+            <condition>
+                <compare field="serviceDataTypeEnumId" value="URL"/>
+            </condition>
+            <widgets>
+                <form-single name="AddBlockUrlBizService" transition="addBlockBizService" map="pageBlockService">
+                    <field name="isUpdated">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="blockId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="serviceId">
+                        <conditional-field condition="isUpdated" title="Url服务">
+                            <display text="${bizService.name}"/>
+                        </conditional-field>
+                        <default-field title="Url服务">
+                            <drop-table validate="required" validate-msg="服务URL为必填" placeholder="请选择" value-field="name" search-field="searchField"
+                                        key-field="serviceId" transition="getBizServiceDataJson" search-params="{'serviceDataTypeEnumId':'URL','phaseStatusId':'VtAlpha','excludeServiceIds':'${excludeServiceIds}'}" column="[{title:'服务编码',data:'serviceId'},{title:'服务名称',data:'name'},{title:'服务URL',data:'url'}]"
+                                        page-size="20" pagination="true"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceTitle">
+                        <default-field title="服务标题">
+                            <text-line validate="required" validate-msg="服务标题为必填" maxlength="40"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceDesc">
+                        <default-field title="服务描述">
+                            <text-line validate="required" validate-msg="服务描述为必填" maxlength="255"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceLogo">
+                        <default-field title="服务图片">
+                            <file validate="required" validate-msg="服务图片为必填" fileUrl="displayImageByLocation" accept=".jpeg,.png,.jpg" type="card" pic-size="100" maxsize="200" text="请选择"/>
+                        </default-field>
+                    </field>
+                    <field name="expansion">
+                        <default-field title="扩展参数">
+                            <text-line maxlength="255"/>
+                        </default-field>
+                    </field>
+                    <field name="actionTypeEnumId">
+                        <default-field title="动作类型">
+                            <drop-down allow-empty="true" validate="required" validate-msg="动作类型为必填">
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration">
+                                        <econdition field-name="enumTypeId" value="ActionType"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="确定">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="sectionApp">
+            <condition>
+                <compare field="serviceDataTypeEnumId" value="APP"/>
+            </condition>
+            <widgets>
+                <form-single name="AddBlockAppBizService" transition="addBlockBizService" map="pageBlockService">
+                    <field name="isUpdated">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="blockId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="serviceId">
+                        <conditional-field condition="isUpdated" title="App服务">
+                            <display text="${bizService.name}"/>
+                        </conditional-field>
+                        <default-field title="App服务" >
+                            <drop-table validate="required" validate-msg="App服务为必填" placeholder="请选择" value-field="name" search-field="searchField"
+                                        key-field="serviceId" transition="getBizServiceDataJson" search-params="{'serviceDataTypeEnumId':'APP','phaseStatusId':'VtAlpha','excludeServiceIds':'${excludeServiceIds}'}" column="[{title:'服务编码',data:'serviceId'},{title:'服务名称',data:'name'},{title:'APP包名',data:'appPackage'},{title:'服务URL',data:'url'}]"
+                                        page-size="20" pagination="true"/>
+                        </default-field>
+                    </field>
+                    <field name="appName">
+                        <default-field title="App名称">
+                            <text-line validate="required" validate-msg="App名称为必填" maxlength="40"/>
+                        </default-field>
+                    </field>
+                    <field name="appDownloadDesc">
+                        <default-field title="App下载文本">
+                            <text-line validate="required" validate-msg="App下载文本为必填" maxlength="40"/>
+                        </default-field>
+                    </field>
+                    <field name="appButtonDesc">
+                        <default-field title="App按钮文本">
+                            <text-line validate="required" validate-msg="App按钮文本为必填" maxlength="40"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceLogo">
+                        <default-field title="App图片">
+                            <file validate="required" validate-msg="App图片为必填" fileUrl="displayImageByLocation" accept=".jpeg,.png,.jpg" type="card" pic-size="100" maxsize="200"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceTitle">
+                        <default-field title="服务标题">
+                            <text-line validate="required" validate-msg="服务标题为必填" maxlength="40"/>
+                        </default-field>
+                    </field>
+                    <field name="serviceDesc">
+                        <default-field title="服务描述">
+                            <text-line validate="required" validate-msg="服务描述为必填" maxlength="255"/>
+                        </default-field>
+                    </field>
+                    <field name="backupUrl">
+                        <default-field title="备用链接">
+                            <text-line maxlength="255"/>
+                        </default-field>
+                    </field>
+                    <field name="expansion">
+                        <default-field title="扩展参数">
+                            <text-line maxlength="255"/>
+                        </default-field>
+                    </field>
+                    <field name="actionTypeEnumId">
+                        <default-field title="动作类型">
+                            <drop-down allow-empty="true" validate="required" validate-msg="动作类型为必填">
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration">
+                                        <econdition field-name="enumTypeId" value="ActionType"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="确定">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,186 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false" standalone="true">
+
+    <parameter name="blockId" required="true"/>
+
+    <transition name="getBlockServiceDetail">
+        <default-response url="../ViewBlockBizService" parameter-map="context"/>
+    </transition>
+
+    <actions>
+        <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="pageBlock"/>
+        <if condition="pageBlock">
+            <entity-find-one entity-name="moqui.security.UserAccount" value-field="createUserAccount">
+                <field-map field-name="userId" from="pageBlock.createdByUserId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="moqui.security.UserAccount" value-field="updateUserAccount">
+                <field-map field-name="userId" from="pageBlock.lastUpdatedByUserId"/>
+            </entity-find-one>
+        </if>
+    </actions>
+
+    <widgets>
+        <container-row>
+            <row-col lg="6">
+                <container-box allow-fold="false">
+                    <box-header>
+                        <label text="区块信息"/>
+                    </box-header>
+                    <box-body>
+                        <form-single name="EditPageBlockForm" map="pageBlock">
+                            <field name="blockId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="name" label-cols="8">
+                                <default-field title="区块名称">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="blockKey" label-cols="8">
+                                <default-field title="区块唯一标识">
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </row-col>
+            <row-col lg="18">
+                <container-box allow-fold="false">
+                    <box-header>
+                        <label text="服务信息"/>
+                    </box-header>
+                    <box-body>
+                        <form-list name="BizServiceList" list="bizServiceList" use-widget="aggrid">
+                            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceApplDetailView"
+                                         list="bizServiceList">
+                                <search-form-inputs/>
+                                <econdition field-name="blockId" from="blockId"/>
+                                <econdition field-name="thruDate" operator="is-null"/>
+                                <order-by field-name="+orderNumber"/>
+                            </entity-find>
+                            <row-actions>
+                                <if condition="enabled == 'Y'">
+                                    <set field="enabledText" value="上架"/>
+                                    <set field="enabledCond" from="false"/>
+                                    <set field="disabledCond" from="true"/>
+                                    <else>
+                                        <set field="enabledText" value="下架"/>
+                                        <set field="enabledCond" from="true"/>
+                                        <set field="disabledCond" from="false"/>
+                                    </else>
+                                </if>
+                                <if condition="freeze == 'Y'">
+                                    <set field="freezeText" value="冻结"/>
+                                    <set field="freezeCond" from="false"/>
+                                    <set field="unfreezeCond" from="true"/>
+                                    <else>
+                                        <set field="freezeText" value="未冻结"/>
+                                        <set field="freezeCond" from="true"/>
+                                        <set field="unfreezeCond" from="false"/>
+                                    </else>
+                                </if>
+                            </row-actions>
+                            <field name="blockId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="serviceId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="pseudoId">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="服务编码">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="name">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="服务名称">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="serviceDataTypeEnumId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="serviceDataTypeName">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="服务类型">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="url" width="200">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="服务地址">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="appPackage">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="App包名">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="enabled">
+                                <header-field>
+                                    <drop-down allow-empty="true">
+                                        <option key="" text="全部"/>
+                                        <option key="Y" text="上架"/>
+                                        <option key="N" text="下架"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="上架/下架">
+                                    <display text="${enabledText}"/>
+                                </default-field>
+                            </field>
+                            <field name="freeze">
+                                <header-field>
+                                    <drop-down allow-empty="true">
+                                        <option key="" text="全部"/>
+                                        <option key="Y" text="冻结"/>
+                                        <option key="N" text="未冻结"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field title="冻结/未冻结">
+                                    <display text="${freezeText}"/>
+                                </default-field>
+                            </field>
+                            <field name="detail">
+                                <default-field title="详情">
+                                    <link url="getBlockServiceDetail" text="查看" link-parameters="{'blockId':'blockId','serviceId':'serviceId','serviceDataTypeEnumId':'serviceDataTypeEnumId'}" target-dialog="dynamicDialog"/>
+                                </default-field>
+                            </field>
+                            <field name="orderNumber">
+                                <header-field>
+                                    <text-find/>
+                                </header-field>
+                                <default-field title="排序">
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </row-col>
+        </container-row>
+        <grid-dynamic-dialog id="dynamicDialog" title="详情"/>
+    </widgets>
+</screen>

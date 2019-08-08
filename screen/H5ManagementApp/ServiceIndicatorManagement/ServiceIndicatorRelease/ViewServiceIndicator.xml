@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false" standalone="true">
+
+    <parameter name="indicatorId" required="true"/>
+
+    <actions>
+        <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceIndicator" value-field="bSIndicator"/>
+        <if condition="bSIndicator">
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                <field-map field-name="serviceId" from="bSIndicator.serviceId"/>
+            </entity-find-one>
+            <set field="targetUrl" from="bizService.url"/>
+            <set field="transitUrl" from="'actionType='+bSIndicator.indicatorName"/>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceParamList" list="paramsList">
+                <econdition field-name="serviceId" from="bSIndicator.serviceId"/>
+            </entity-find>
+            <iterate list="paramsList" entry="param">
+                <if condition="param.defaultValue == null || param.defaultValue.trim() == ''">
+                    <set field="transitUrl" from="transitUrl+'&amp;'+param.enumCode+'=${'+param.enumCode+'}'"/>
+                    <else>
+                        <set field="transitUrl" from="transitUrl+'&amp;'+param.enumCode+'='+param.defaultValue"/>
+                    </else>
+                </if>
+            </iterate>
+            <!--<set field="targetUrl" from="bizService.url+'?'+targetUrl"/>-->
+            <script>context.remove("paramsList_xafind")</script>
+        </if>
+    </actions>
+
+    <widgets>
+        <form-single name="ViewServiceIndicatorForm" map="bSIndicator">
+            <field name="indicatorId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="indicatorName">
+                <default-field title="服务标识名称">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="indicatorDesc">
+                <default-field title="服务标识描述">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="pseudoId">
+                <default-field title="服务编码">
+                    <display text="${pseudoId}" text-map="bizService"/>
+                </default-field>
+            </field>
+            <field name="name">
+                <default-field title="服务名称">
+                    <display text="${name}" text-map="bizService"/>
+                </default-field>
+            </field>
+            <field name="transitUrl">
+                <default-field title="中转服务链接">
+                    <display text="${transitUrl}"/>
+                </default-field>
+            </field>
+            <field name="url">
+                <default-field title="目标服务链接">
+                    <display text="${targetUrl}"/>
+                </default-field>
+            </field>
+            <field name="appPackage">
+                <default-field title="APP包名">
+                    <display text="${appPackage}" text-map="bizService"/>
+                </default-field>
+            </field>
+            <field name="serviceDataTypeEnumId">
+                <default-field title="服务类型">
+                    <display text="${serviceDataTypeEnumId}" text-map="bizService"/>
+                </default-field>
+            </field>
+        </form-single>
+    </widgets>
+</screen>

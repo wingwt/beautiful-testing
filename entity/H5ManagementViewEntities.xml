@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-2.1.xsd">
+
+    <view-entity entity-name="PageBlockServiceDetailView" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PBSA" entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl"/>
+        <member-entity entity-alias="BS" entity-name="mantle.mfexcel.h5page.BizService" join-from-alias="PBSA">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+        <alias name="blockId" entity-alias="PBSA"/>
+        <alias name="serviceNames" field="name"  function="group_concat" is-aggregate="true" entity-alias="BS"/>
+        <alias name="serviceIds" field="serviceId" function="group_concat" is-aggregate="true" entity-alias="BS"/>
+        <alias name="servicePseudoIds" field="pseudoId" function="group_concat" is-aggregate="true" entity-alias="BS"/>
+        <alias name="serviceUrls" field="url" function="group_concat" is-aggregate="true" entity-alias="BS"/>
+        <alias name="pbsThruDate" field="thruDate" entity-alias="PBSA"/>
+        <alias name="bsThruDate" field="thruDate" entity-alias="BS"/>
+    </view-entity>
+
+    <!--子查询，查询参数名称-->
+    <view-entity entity-name="ConfigParamName" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PARAM" entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"/>
+        <member-entity entity-alias="CONFIG_PARAM" entity-name="moqui.basic.Enumeration" join-from-alias="PARAM">
+            <key-map field-name="configParamEnumId" related="enumId"/>
+        </member-entity>
+        <alias name="serviceId" field="serviceId" entity-alias="PARAM"/>
+        <alias name="paramName" field="description"  function="group_concat" is-aggregate="true" entity-alias="CONFIG_PARAM"/>
+    </view-entity>
+
+    <!--子查询，查询区块名称-->
+    <view-entity entity-name="ConfigBlockName" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="BSBA" entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl"/>
+        <member-entity entity-alias="PB" entity-name="mantle.mfexcel.h5page.PageBlock" join-from-alias="BSBA">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <alias name="thruDate" field="thruDate" entity-alias="BSBA"/>
+        <alias name="serviceId" field="serviceId" entity-alias="BSBA"/>
+        <alias name="blockName" field="name"  function="group_concat" is-aggregate="true" entity-alias="PB"/>
+    </view-entity>
+
+    <view-entity entity-name="PageBlockServiceApplView" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PB" entity-name="mantle.mfexcel.h5page.PageBlock"/>
+        <member-entity entity-alias="PBSDV" entity-name="mantle.mfexcel.h5page.PageBlockServiceDetailView" sub-select="true" join-from-alias="PB" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <member-entity entity-alias="UA1" entity-name="moqui.security.UserAccount" join-from-alias="PB" join-optional="true">
+            <key-map field-name="createdByUserId" related="userId"/>
+        </member-entity>
+        <member-entity entity-alias="UA2" entity-name="moqui.security.UserAccount" join-from-alias="PB" join-optional="true">
+            <key-map field-name="lastUpdatedByUserId" related="userId"/>
+        </member-entity>
+        <alias-all entity-alias="PB"/>
+        <alias name="serviceNames" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="serviceIds" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="servicePseudoIds" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="serviceUrls" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="pbsThruDate" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="bsThruDate" entity-alias="PBSDV" is-aggregate="true"/>
+        <alias name="createdUsername" field="userFullName" entity-alias="UA1"/>
+        <alias name="lastUpdatedUsername" field="userFullName" entity-alias="UA2"/>
+        <alias name="lastUpdatedStamp" entity-alias="PB"/>
+        <entity-condition>
+            <econdition field-name="pbsThruDate" operator="is-null"/>
+            <econdition field-name="bsThruDate" operator="is-null"/>
+        </entity-condition>
+    </view-entity>
+
+    <view-entity entity-name="PageBlockServiceApplDetailView" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PB" entity-name="mantle.mfexcel.h5page.PageBlock"/>
+        <member-entity entity-alias="PBSDV" entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" join-from-alias="PB" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <member-entity entity-alias="BS" entity-name="mantle.mfexcel.h5page.BizService" join-from-alias="PBSDV">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+        <member-entity entity-alias="E" entity-name="moqui.basic.Enumeration" join-from-alias="BS">
+            <key-map field-name="serviceDataTypeEnumId" related="enumId"/>
+        </member-entity>
+        <alias name="blockId" entity-alias="PB"/>
+        <alias name="serviceId" entity-alias="BS"/>
+        <alias name="pseudoId" entity-alias="BS"/>
+        <alias name="name" entity-alias="BS"/>
+        <alias name="serviceDataTypeEnumId" entity-alias="BS"/>
+        <alias name="serviceDataTypeName" field="description" entity-alias="E"/>
+        <alias name="url" entity-alias="BS"/>
+        <alias name="appPackage" entity-alias="BS"/>
+        <alias name="orderNumber" entity-alias="PBSDV"/>
+        <alias name="enabled" entity-alias="PBSDV"/>
+        <alias name="freeze" entity-alias="PBSDV"/>
+        <alias name="thruDate" entity-alias="PBSDV"/>
+    </view-entity>
+
+    <view-entity entity-name="BizServiceIndicatorView" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="BSI" entity-name="mantle.mfexcel.h5page.BizServiceIndicator"/>
+        <member-entity entity-alias="BS" entity-name="mantle.mfexcel.h5page.BizService" join-from-alias="BSI" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+            <entity-condition>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-condition>
+        </member-entity>
+        <member-entity entity-alias="UA1" entity-name="moqui.security.UserAccount" join-from-alias="BSI" join-optional="true">
+            <key-map field-name="createdByUserId" related="userId"/>
+        </member-entity>
+        <member-entity entity-alias="UA2" entity-name="moqui.security.UserAccount" join-from-alias="BSI" join-optional="true">
+            <key-map field-name="lastUpdatedByUserId" related="userId"/>
+        </member-entity>
+        <alias-all entity-alias="BSI"/>
+        <alias name="pseudoId" entity-alias="BS"/>
+        <alias name="name" entity-alias="BS"/>
+        <alias name="url" entity-alias="BS"/>
+        <alias name="serviceDataTypeEnumId" entity-alias="BS"/>
+        <alias name="appPackage" entity-alias="BS"/>
+        <alias name="createdUsername" field="userFullName" entity-alias="UA1"/>
+        <alias name="lastUpdatedUsername" field="userFullName" entity-alias="UA2"/>
+        <alias name="lastUpdatedStamp" entity-alias="BSI"/>
+    </view-entity>
+    <view-entity entity-name="BizServiceList" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="SE" entity-name="mantle.mfexcel.h5page.BizService"/>
+        <member-entity entity-alias="DATA_TYPE" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="serviceDataTypeEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="INDUSTRY" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="industryEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="COOPERATION_TYPE" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="cooperationTypeEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="SERVICE_TYPE" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="serviceTypeEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="SETTLEMENT_METHOD" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="settlementMethodEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="MARKETING_TYPE" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="marketingTypeEnumId" related="enumId"/>
+        </member-entity>
+        <member-entity entity-alias="BUSINESS_TYPE" entity-name="moqui.basic.Enumeration" join-from-alias="SE" join-optional="true">
+            <key-map field-name="businessTypeEnumId" related="enumId"/>
+        </member-entity>
+        <!--<member-entity entity-alias="VENDOR_PARTY" entity-name="mantle.mfexcel.old.TbPublicMainRelease" join-from-alias="SE" join-optional="true">-->
+            <!--<key-map field-name="vendorPartyId" related="statusId"/>-->
+        <!--</member-entity>-->
+        <member-entity entity-alias="UA1" entity-name="moqui.security.UserAccount" join-from-alias="SE" join-optional="true">
+            <key-map field-name="createdByUserId" related="userId"/>
+        </member-entity>
+        <member-entity entity-alias="UA2" entity-name="moqui.security.UserAccount" join-from-alias="SE" join-optional="true">
+            <key-map field-name="lastUpdatedByUserId" related="userId"/>
+        </member-entity>
+
+        <member-entity entity-alias="CPN" entity-name="mantle.mfexcel.h5page.ConfigParamName" sub-select="true" join-from-alias="SE" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+
+        <member-entity entity-alias="CBN" entity-name="mantle.mfexcel.h5page.ConfigBlockName" sub-select="true" join-from-alias="SE" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+
+        <alias-all entity-alias="SE"/>
+
+        <alias name="cbnThruDate" field="thruDate" entity-alias="CBN"/>
+        <alias name="dataType" field="description" entity-alias="DATA_TYPE"/>
+        <alias name="industry" field="description" entity-alias="INDUSTRY"/>
+        <alias name="cooperationType" field="description" entity-alias="COOPERATION_TYPE"/>
+        <alias name="serviceType" field="description" entity-alias="SERVICE_TYPE"/>
+        <alias name="settlementMethod" field="description" entity-alias="SETTLEMENT_METHOD"/>
+        <alias name="marketingType" field="description" entity-alias="MARKETING_TYPE"/>
+        <alias name="businessType" field="description" entity-alias="BUSINESS_TYPE"/>
+        <!--<alias name="pubName" entity-alias="VENDOR_PARTY"/>-->
+        <alias name="createdUsername" field="userFullName" entity-alias="UA1"/>
+        <alias name="lastUpdatedUsername" field="userFullName" entity-alias="UA2"/>
+        <alias name="lastUpdatedStamp" entity-alias="SE"/>
+        <alias name="paramName" field="paramName"  is-aggregate="true" entity-alias="CPN"/>
+        <alias name="blockName" field="blockName" is-aggregate="true"  entity-alias="CBN"/>
+
+    </view-entity>
+    <view-entity entity-name="BizServiceParamList" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PARAM" entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"/>
+        <member-entity entity-alias="CONFIG_PARAM" entity-name="moqui.basic.Enumeration" join-from-alias="PARAM"
+                       join-optional="true">
+            <key-map field-name="configParamEnumId" related="enumId"/>
+        </member-entity>
+
+        <alias-all entity-alias="PARAM"/>
+        <alias name="paramKey" field="enumId" entity-alias="CONFIG_PARAM"/>
+        <alias name="paramName" field="description" entity-alias="CONFIG_PARAM"/>
+        <alias name="enumCode" field="enumCode" entity-alias="CONFIG_PARAM"/>
+    </view-entity>
+
+    <!--    服务与区块-->
+    <view-entity entity-name="PageServiceBlockView" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="BL" entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl"/>
+        <member-entity entity-alias="PBSAV" entity-name="mantle.mfexcel.h5page.PageBlockServiceApplView" sub-select="true" join-from-alias="BL" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+        <alias-all entity-alias="BL"/>
+        <alias name="blockName" field="name" entity-alias="PBSAV" is-aggregate="true"/>
+        <alias name="blockKey" entity-alias="PBSAV" is-aggregate="true"/>
+        <alias name="serviceNames" entity-alias="PBSAV" is-aggregate="true"/>
+    </view-entity>
+
+    <view-entity entity-name="BizServiceBlockList" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="BSBA" entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl"/>
+        <member-entity entity-alias="PB" entity-name="mantle.mfexcel.h5page.PageBlock" join-from-alias="BSBA" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <member-entity entity-alias="PBSAV" entity-name="mantle.mfexcel.h5page.PageBlockServiceDetailView" sub-select="true" join-from-alias="BSBA" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <alias-all entity-alias="BSBA"/>
+        <alias name="blockKey" entity-alias="PB"/>
+        <alias name="blockName" field="name" entity-alias="PB"/>
+        <alias name="serviceNames" entity-alias="PBSAV" is-aggregate="true"/>
+    </view-entity>
+
+    <view-entity entity-name="BizServiceParamGroupList" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="PARAM" entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"/>
+        <member-entity entity-alias="CONFIG_PARAM" entity-name="moqui.basic.Enumeration" join-from-alias="PARAM"
+                       join-optional="true">
+            <key-map field-name="configParamEnumId" related="enumId"/>
+        </member-entity>
+        <alias name="serviceId" entity-alias="PARAM"/>
+        <alias name="params" field="description" function="group_concat" is-aggregate="true" entity-alias="CONFIG_PARAM"/>
+    </view-entity>
+
+    <view-entity entity-name="PageServiceHisList" package="mantle.mfexcel.h5page">
+        <member-entity entity-alias="BS" entity-name="mantle.mfexcel.h5page.BizService"/>
+        <member-entity entity-alias="BSBA" entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" join-from-alias="BS" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+        <member-entity entity-alias="PB" entity-name="mantle.mfexcel.h5page.PageBlock" join-from-alias="BSBA" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <member-entity entity-alias="PBSAV" entity-name="mantle.mfexcel.h5page.PageBlockServiceDetailView" sub-select="true" join-from-alias="BSBA" join-optional="true">
+            <key-map field-name="blockId" related="blockId"/>
+        </member-entity>
+        <member-entity entity-alias="BSPGL" entity-name="mantle.mfexcel.h5page.BizServiceParamGroupList" sub-select="true" join-from-alias="BS" join-optional="true">
+            <key-map field-name="serviceId" related="serviceId"/>
+        </member-entity>
+        <member-entity entity-alias="UA1" entity-name="moqui.security.UserAccount" join-from-alias="BS" join-optional="true">
+            <key-map field-name="createdByUserId" related="userId"/>
+        </member-entity>
+
+        <alias name="sourceId" entity-alias="BS" is-aggregate="true"/>
+        <alias name="blockName" field="name" entity-alias="PB" function="group_concat" is-aggregate="true"/>
+        <alias name="thruDate" entity-alias="BS"/>
+        <alias name="pseudoId" entity-alias="BS"/>
+        <alias name="enabled" entity-alias="BS"/>
+        <alias name="appPackage" entity-alias="BS"/>
+        <alias name="url" entity-alias="BS"/>
+        <alias name="serviceNames" entity-alias="PBSAV"/>
+        <alias name="params" entity-alias="BSPGL"/>
+        <alias name="createdUsername" field="userFullName" entity-alias="UA1"/>
+        <alias name="lastUpdatedStamp" entity-alias="BS"/>
+        <alias name="bsbaThruDate" entity-alias="BSBA" field="thruDate"/>
+    </view-entity>
+</entities>

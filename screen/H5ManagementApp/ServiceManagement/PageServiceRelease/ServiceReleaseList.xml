@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="外网" default-menu-index="1">
+
+    <transition name="getBizService">
+        <default-response url="../ServiceReleaseDetail"></default-response>
+    </transition>
+    <transition name="getBizServiceHis">
+        <default-response url="../ServiceHisList"></default-response>
+    </transition>
+
+    <widgets>
+        <form-list name="PageServiceReleaseList" list="serviceReleaseList" use-widget="aggrid" multi="true" auto-stretch="true">
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceList" list="bizServiceReleaseList">
+                <search-form-inputs default-order-by="-lastUpdatedStamp"/>
+                <econdition field-name="phaseStatusId" value="VtRelease"></econdition>
+                <econdition field-name="cbnThruDate" operator="is-null"></econdition>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <row-actions>
+                <if condition="enabled == 'Y'">
+                    <set field="enabledCN" value="启用"/>
+                    <else>
+                        <set field="enabledCN" value="停用"/>
+                    </else>
+                </if>
+                <!--VENDOR_PARTY_ID  vendorPartyId-->
+                <log message="vendorPartyId ${vendorPartyId}"/>
+                <entity-find-one entity-name="mantle.mfexcel.old.TbPublicMainRelease" value-field="publicMainRelease">
+                    <field-map field-name="id" from="vendorPartyId"/>
+                    <select-field field-name="id,pubName"/>
+                </entity-find-one>
+                <log message="TbPublicMainRelease ${publicMainRelease}"/>
+                <if condition="publicMainRelease">
+                    <set field="vendorPartyId" from="publicMainRelease.id  + '，' + publicMainRelease.pubName"/>
+                </if>
+            </row-actions>
+            <field name="tableIndex" from="serviceReleaseList_index+1" show-checkbox="true">
+                <default-field title="序号">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="sourceId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="pseudoId">
+                <header-field title="服务编码">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="name">
+                <header-field title="服务名称">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="vendorPartyId">
+                <header-field title="服务提供商" show-order-by="true">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="cooperationType">
+                <header-field title="合作类型" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="CooperationType"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="industry">
+                <header-field title="服务行业" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="Industry"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceType">
+                <header-field title="服务类别" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="ServiceType"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="url" width="200">
+                <header-field title="服务url">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="businessType">
+                <header-field title="商业类型" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="BusinessType"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="settlementMethod">
+                <header-field title="结算方式" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="SettlementMethod"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="settlementOrder">
+                <header-field title="结算报价">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="marketingType">
+                <header-field title="营销类型" show-order-by="true">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${description}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="MarketingType"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="appPackage">
+                <header-field title="App包名">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="dataType">
+                <header-field title="资源类型">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="paramName">
+                <header-field title="参数名称">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+
+            <field name="blockName">
+                <header-field title="区块名称">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <header-field title="启用状态" show-order-by="case-insensitive">
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="启用"/>
+                        <option key="N" text="停用"/>
+                    </drop-down>
+                </header-field>
+                <default-field>
+                    <display text="${enabledCN}"/>
+                </default-field>
+            </field>
+            <field name="remark">
+                <header-field title="备注">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="createdStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="创建时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="createdUsername">
+                <header-field title="创建人">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="编辑时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedUsername">
+                <header-field title="编辑人">
+                    <text-find size="10" hide-options="true"/>
+                </header-field>
+                <default-field>
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationButton" is-action-column="true" width="200">
+                <header-field>
+                    <reset/>
+                </header-field>
+                <default-field title="操作">
+                    <link url="getBizService" text="查看" link-parameters="{'serviceId':'serviceId'}" btn-type="info"/>
+                    <link url="getBizServiceHis" text="日志" link-parameters="{'sourceId':'sourceId','pseudoId':'pseudoId'}" btn-type="info"/>
+                </default-field>
+            </field>
+        </form-list>
+    </widgets>
+</screen>

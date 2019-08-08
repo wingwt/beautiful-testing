@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd">
+
+    <transition name="addPageBlock">
+        <default-response url="../AddPageBlock"></default-response>
+    </transition>
+
+    <transition name="editPageBlock">
+        <default-response url="../EditPageBlock"></default-response>
+    </transition>
+
+    <transition name="enablePageBlock">
+        <service-call name="moqui.h5Management.H5ManagementServices.enable#PageBlock" in-map="context+[enabled:'Y']" out-map="context"/>
+        <default-response type="none"></default-response>
+    </transition>
+
+    <transition name="disablePageBlock">
+        <service-call name="moqui.h5Management.H5ManagementServices.enable#PageBlock" in-map="context+[enabled:'N']" out-map="context"/>
+        <default-response type="none"></default-response>
+    </transition>
+
+    <transition name="multiReleasePageBlock">
+        <actions>
+            <set field="blockIdList" from="context._requestBodyJsonList.blockId as List"/>
+            <service-call name="moqui.h5Management.H5ManagementServices.multiRelease#PageBlock" in-map="[blockIdList:blockIdList]"/>
+        </actions>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="allReleasePageBlock">
+        <service-call name="moqui.h5Management.H5ManagementServices.allRelease#PageBlock"/>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="multiDisablePageBlock">
+        <actions>
+            <set field="blockIdList" from="context._requestBodyJsonList.blockId as List"/>
+            <service-call name="moqui.h5Management.H5ManagementServices.multiDisable#PageBlock" in-map="[blockIdList:blockIdList]"/>
+        </actions>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="allDisablePageBlock">
+        <service-call name="moqui.h5Management.H5ManagementServices.allDisable#PageBlock"/>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="releasePageBlock">
+        <service-call name="moqui.h5Management.H5ManagementServices.release#PageBlock" in-map="context"/>
+        <default-response url="."></default-response>
+    </transition>
+
+    <transition name="viewPageBlock">
+        <default-response url="../ViewPageBlock" parameter-map="context"></default-response>
+    </transition>
+
+    <widgets>
+        <toolbar-col>
+            <dynamic-dialog id="addPageBlock" button-text="新增" type="success" transition="addPageBlock"/>
+
+            <button-group vertical="true">
+                <link url="multiReleasePageBlock" text="批量发布" target-list="PageBlockWhiteList" confirmation="您确定发布该批数据吗？"/>
+            </button-group>
+
+            <button-group vertical="true">
+                <link url="allReleasePageBlock" text="全部发布" confirmation="您确定发布全部未发布数据吗？"/>
+            </button-group>
+
+            <button-group vertical="true">
+                <link url="multiDisablePageBlock" text="批量停用" target-list="PageBlockWhiteList" confirmation="您确定停用该批数据吗？"/>
+            </button-group>
+
+            <button-group vertical="true">
+                <link url="allDisablePageBlock" text="全部停用" confirmation="您确定停用全部数据吗？"/>
+            </button-group>
+        </toolbar-col>
+
+        <form-list name="PageBlockWhiteList" list="pageBlockWhiteList" use-widget="aggrid" multi="true" auto-stretch="true">
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceApplView" list="pageBlockWhiteList">
+                <search-form-inputs default-order-by="-lastUpdatedStamp"/>
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <row-actions>
+                <if condition="enabled == 'Y'">
+                    <set field="enabledText" value="启用"/>
+                    <set field="enabledCond" from="false"/>
+                    <set field="disabledCond" from="true"/>
+                    <else>
+                        <set field="enabledText" value="停用"/>
+                        <set field="enabledCond" from="true"/>
+                        <set field="disabledCond" from="false"/>
+                    </else>
+                </if>
+                <if condition="isIssued == 'Y'">
+                    <set field="isIssuedText" value="已发布"/>
+                    <set field="isIssuedCond" from="false"/>
+                    <else>
+                        <set field="isIssuedText" value="未发布"/>
+                        <set field="isIssuedCond" from="true"/>
+                    </else>
+                </if>
+            </row-actions>
+            <field name="tableIndex" from="pageBlockWhiteList_index+1" show-checkbox="true" width="120">
+                <default-field title="序号">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="blockId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="name">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块名称">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="blockKey">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块唯一标识">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceNames">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="servicePseudoIds">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务编码">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceUrls" width="200">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="区块服务URL">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="启用"/>
+                        <option key="N" text="停用"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="启用状态">
+                    <display text="${enabledText}"/>
+                </default-field>
+            </field>
+            <field name="isIssued">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="已发布"/>
+                        <option key="N" text="未发布"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="发布状态">
+                    <display text="${isIssuedText}"/>
+                </default-field>
+            </field>
+            <field name="createdStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="创建时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="createdUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="创建人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="编辑时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="编辑人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationButton" is-action-column="true" width="200">
+                <header-field>
+                    <reset/>
+                </header-field>
+                <default-field title="操作">
+                    <link url="viewPageBlock" link-parameters="{'blockId':'blockId'}" text="查看" btn-type="primary"/>
+                    <link url="editPageBlock" link-parameters="{'blockId':'blockId'}" text="编辑" btn-type="primary"/>
+                    <link url="enablePageBlock" link-parameters="{'blockId':'blockId'}" text="启用" btn-type="success" confirmation="您确定启用该数据吗？" display-condition-field="enabledCond"/>
+                    <link url="disablePageBlock" link-parameters="{'blockId':'blockId'}" text="停用" btn-type="danger" confirmation="您确定停用该数据吗？" display-condition-field="disabledCond"/>
+                    <link url="releasePageBlock" link-parameters="{'blockId':'blockId'}" text="发布" btn-type="success" confirmation="您确定发布该数据吗？" display-condition-field="isIssuedCond"/>
+                </default-field>
+            </field>
+        </form-list>
+    </widgets>
+</screen>

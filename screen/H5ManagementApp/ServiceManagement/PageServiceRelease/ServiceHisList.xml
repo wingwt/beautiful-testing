@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="服务编码" default-menu-index="1">
+
+    <parameter name="sourceId" required="true"/>
+    <parameter name="pseudoId" required="true"/>
+
+    <widgets>
+        <form-list name="PageServiceReleaseList" list="serviceReleaseList" use-widget="aggrid"  >
+            <entity-find entity-name="mantle.mfexcel.h5page.PageServiceHisList" list="serviceHisList">
+                <econdition field-name="sourceId" from="sourceId"></econdition>
+                <econdition field-name="thruDate" operator="is-not-null"/>
+                <econdition field-name="bsbaThruDate" operator="is-null"/>
+                <order-by field-name="-lastUpdatedStamp"/>
+            </entity-find>
+            <row-actions>
+                <if condition="enabled == 'Y'">
+                    <set field="enabledCN" value="启用"/>
+                    <else>
+                        <set field="enabledCN" value="停用"/>
+                    </else>
+                </if>
+            </row-actions>
+            <field name="lastUpdatedStamp">
+                <default-field title="操作时间" >
+                    <display format="yyyy-MM-dd"/>
+                </default-field>
+            </field>
+            <field name="createdUsername">
+                <default-field title="操作人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="url" width="200">
+                <default-field title="服务url">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="pseudoId">
+                <default-field title="服务编码">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="appPackage">
+                <default-field title="App包名">
+                    <display/>
+                </default-field>
+            </field>
+
+            <field name="params">
+                <default-field title="配置参数">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="blockName">
+                <default-field title="页面区块">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <default-field title="启用状态">
+                    <display text="${enabledCN}"/>
+                </default-field>
+            </field>
+        </form-list>
+    </widgets>
+</screen>

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd">
+
+    <transition name="viewBSIndicator">
+        <default-response url="../ViewServiceIndicator" parameter-map="context"></default-response>
+    </transition>
+
+    <widgets>
+        <form-list name="BSIndicatorReleaseList" list="bSIndicatorReleaseList" use-widget="aggrid" multi="true" auto-stretch="true">
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicatorView" list="bSIndicatorReleaseList">
+                <search-form-inputs default-order-by="-lastUpdatedStamp"/>
+                <econdition field-name="phaseStatusId" value="VtRelease"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <row-actions>
+                <if condition="enabled == 'Y'">
+                    <set field="enabledText" value="启用"/>
+                    <set field="enabledCond" from="false"/>
+                    <set field="disabledCond" from="true"/>
+                    <else>
+                        <set field="enabledText" value="停用"/>
+                        <set field="enabledCond" from="true"/>
+                        <set field="disabledCond" from="false"/>
+                    </else>
+                </if>
+                <if condition="isIssued == 'Y'">
+                    <set field="isIssuedText" value="已发布"/>
+                    <else>
+                        <set field="isIssuedText" value="未发布"/>
+                    </else>
+                </if>
+                <set field="targetUrl" from="url"/>
+                <set field="transitUrl" from="'actionType='+indicatorName"/>
+                <entity-find entity-name="mantle.mfexcel.h5page.BizServiceParamList" list="paramsList">
+                    <econdition field-name="serviceId" from="serviceId"/>
+                </entity-find>
+                <iterate list="paramsList" entry="param">
+                    <if condition="param.defaultValue == null || param.defaultValue.trim() == ''">
+                        <set field="transitUrl" from="transitUrl+'&amp;'+param.enumCode+'=${'+param.enumCode+'}'"/>
+                        <else>
+                            <set field="transitUrl" from="transitUrl+'&amp;'+param.enumCode+'='+param.defaultValue"/>
+                        </else>
+                    </if>
+                </iterate>
+                <!--<if condition="url.lastIndexOf('?') != -1">-->
+                    <!--<set field="targetUrl" from="url+'&amp;'+targetUrl"/>-->
+                    <!--<else>-->
+                        <!--<set field="targetUrl" from="url+'?'+targetUrl"/>-->
+                    <!--</else>-->
+                <!--</if>-->
+                <script>context.remove("paramsList_xafind")</script>
+            </row-actions>
+            <field name="tableIndex" from="bSIndicatorReleaseList_index+1" show-checkbox="true" width="120">
+                <default-field title="序号">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="indicatorId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="serviceId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="indicatorName">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="服务标识名称">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="indicatorDesc">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="服务标识描述">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="pseudoId">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="服务编码">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="name">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="服务名称">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="serviceDataTypeEnumId">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="资源类型">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="appPackage">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="APP包名">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="transitUrl" width="200">
+                <default-field title="中转服务链接">
+                    <display text="${transitUrl}"/>
+                </default-field>
+            </field>
+            <field name="url" width="200">
+                <default-field title="目标服务链接">
+                    <display text="${targetUrl}"/>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="启用"/>
+                        <option key="N" text="停用"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="启用状态">
+                    <display text="${enabledText}"/>
+                </default-field>
+            </field>
+            <field name="isIssued">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="已发布"/>
+                        <option key="N" text="未发布"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="发布状态">
+                    <display text="${isIssuedText}"/>
+                </default-field>
+            </field>
+            <field name="createdStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="创建时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="createdUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="创建人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedStamp">
+                <header-field>
+                    <date-find format="yyyy-MM-dd HH:mm"/>
+                </header-field>
+                <default-field title="编辑时间">
+                    <display format="yyyy-MM-dd HH:mm:ss"/>
+                </default-field>
+            </field>
+            <field name="lastUpdatedUsername">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="编辑人">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationButton" is-action-column="true" width="100">
+                <header-field>
+                    <reset/>
+                </header-field>
+                <default-field title="操作">
+                    <link url="viewBSIndicator" link-parameters="{'indicatorId':'indicatorId'}" text="查看" btn-type="primary" target-dialog="ViewBSIndicatorDialog"/>
+                </default-field>
+            </field>
+        </form-list>
+        <grid-dynamic-dialog title="查看" id="ViewBSIndicatorDialog"/>
+    </widgets>
+</screen>

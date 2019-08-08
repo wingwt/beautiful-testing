@@ -1,0 +1,1224 @@
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.1.xsd">
+
+    <service verb="edit" noun="PageBlock" semaphore="wait">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.PageBlock"/>
+        </in-parameters>
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="existPageBlockList">
+                <econdition field-name="blockKey" from="blockKey"/>
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+                <econdition field-name="blockId" from="blockId" operator="not-equals" ignore-if-empty="true"/>
+            </entity-find>
+            <if condition="existPageBlockList != null &amp;&amp; existPageBlockList[0] != null">
+                <return type="warning" message="区块唯一标识不能重复"/>
+            </if>
+            <if condition="blockId">
+                <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="origPageBlock"/>
+                <set field="newPageBlock" from="origPageBlock.cloneValue()"/>
+                <entity-set value-field="newPageBlock" include="nonpk" set-if-empty="true"/>
+                <if condition="newPageBlock == origPageBlock">
+                    <return type="info" message="无数据更新"/>
+                </if>
+                <service-call name="update#mantle.mfexcel.h5page.PageBlock" in-map="context+[isIssued:'N']"
+                              out-map="context"/>
+                <else>
+                    <service-call name="create#mantle.mfexcel.h5page.PageBlock"
+                                  in-map="context+[enabled:'Y',isIssued:'N',phaseStatusId:'VtAlpha']"
+                                  out-map="context"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="enable" noun="PageBlock">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="enabled" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="pageBlock">
+                <field-map field-name="blockId" from="blockId"/>
+            </entity-find-one>
+            <if condition="pageBlock">
+                <set field="pageBlock.enabled" from="enabled"/>
+                <set field="pageBlock.isIssued" value="N"/>
+                <entity-update value-field="pageBlock"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="multiDisable" noun="PageBlock">
+        <in-parameters>
+            <parameter name="blockIdList" type="List"/>
+        </in-parameters>
+        <actions>
+            <if condition="blockIdList">
+                <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="pageBlockList">
+                    <econdition field-name="blockId" from="blockIdList" operator="in"/>
+                    <econdition field-name="enabled" value="Y"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <iterate list="pageBlockList" entry="pageBlock">
+                    <set field="pageBlock.enabled" value="N"/>
+                    <set field="pageBlock.isIssued" value="N"/>
+                    <entity-update value-field="pageBlock"/>
+                </iterate>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="allDisable" noun="PageBlock">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="pageBlockList">
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="enabled" value="Y"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <iterate list="pageBlockList" entry="pageBlock">
+                <set field="pageBlock.enabled" value="N"/>
+                <set field="pageBlock.isIssued" value="N"/>
+                <entity-update value-field="pageBlock"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="multiRelease" noun="PageBlock">
+        <in-parameters>
+            <parameter name="blockIdList" type="List" required="true"/>
+        </in-parameters>
+        <actions>
+            <iterate list="blockIdList" entry="blockId">
+                <service-call name="moqui.h5Management.H5ManagementServices.release#PageBlock"
+                              in-map="[blockId:blockId]"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="allRelease" noun="PageBlock">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="pageBlockList">
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="isIssued" value="N"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <iterate list="pageBlockList" entry="pageBlock">
+                <service-call name="moqui.h5Management.H5ManagementServices.release#PageBlock"
+                              in-map="[blockId:pageBlock.blockId]"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="release" noun="PageBlock">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="pageBlock">
+                <field-map field-name="blockId" from="blockId"/>
+            </entity-find-one>
+            <if condition="!blockId">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <if condition="pageBlock.isIssued == 'N'">
+                <set field="pageBlock.isIssued" value="Y"/>
+                <entity-update value-field="pageBlock"/>
+
+                <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="pageBlockServiceList">
+                    <econdition field-name="blockId" from="blockId"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <set field="unReleaseList" from="[]"/>
+                <iterate list="pageBlockServiceList" entry="pageBlockService">
+                    <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                        <field-map field-name="serviceId" from="pageBlockService.serviceId"/>
+                    </entity-find-one>
+                    <if condition="bizService.isIssued != 'Y'">
+                        <script>
+                            unReleaseList.add(bizService.pseudoId)
+                        </script>
+                    </if>
+                </iterate>
+                <if condition="unReleaseList.size() > 0">
+                    <return error="true" type="warning" message="区块[${blockId}:${pageBlock.name}]关联的服务未发布，服务编码${unReleaseList}"/>
+                </if>
+                <!-- 将已发布的记录置为失效状态 -->
+                <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="releasedPageBlockList" limit="1">
+                    <econdition field-name="sourceId" from="blockId"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <if condition="releasedPageBlockList != null &amp;&amp; releasedPageBlockList.size() > 0">
+                    <set field="releasedPageBlock" from="releasedPageBlockList[0]"/>
+                    <set field="releasedPageBlock.thruDate" from="ec.user.nowTimestamp"/>
+                    <entity-update value-field="releasedPageBlock"/>
+                </if>
+
+                <!-- 生成外网数据 -->
+                <set field="pageBlock.blockId" from="null"/>
+                <set field="pageBlock.phaseStatusId" value="VtRelease"/>
+                <set field="pageBlock.sourceId" from="blockId"/>
+                <set field="pageBlock.createdByUserId" from="ec.user.userId"/>
+                <set field="pageBlock.createdStamp" from="ec.user.nowTimestamp"/>
+                <set field="pageBlock.lastUpdatedByUserId" from="ec.user.userId"/>
+                <entity-sequenced-id-primary value-field="pageBlock"/>
+                <entity-create value-field="pageBlock"/>
+
+                <iterate list="pageBlockServiceList" entry="pageBlockService">
+                    <set field="pageBlockService.blockId" from="pageBlock.blockId"/>
+                    <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                        <field-map field-name="sourceId" from="pageBlockService.serviceId"/>
+                        <field-map field-name="phaseStatusId" value="VtRelease"/>
+                        <field-map field-name="thruDate" from="null"/>
+                    </entity-find-one>
+                    <set field="pageBlockService.serviceId" from="bizService.serviceId"/>
+                    <entity-create value-field="pageBlockService"/>
+                </iterate>
+
+                <if condition="releasedPageBlock">
+                    <!-- 查询外网关联该区块的服务 -->
+                    <entity-find entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" list="bizServiceBlockApplList">
+                        <econdition field-name="blockId" from="releasedPageBlock.blockId"/>
+                        <econdition field-name="thruDate" operator="is-null"/>
+                    </entity-find>
+                    <iterate list="bizServiceBlockApplList" entry="bizServiceBlockAppl">
+                        <!-- 将旧的关联关系失效 -->
+                        <set field="bizServiceBlockAppl.thruDate" from="ec.user.nowTimestamp"/>
+                        <entity-update value-field="bizServiceBlockAppl"/>
+
+                        <!-- 生成新的关联关系 -->
+                        <set field="bizServiceBlockAppl.fromDate" from="ec.user.nowTimestamp"/>
+                        <set field="bizServiceBlockAppl.thruDate" from="null"/>
+                        <set field="bizServiceBlockAppl.blockId" from="pageBlock.blockId"/>
+                        <entity-create value-field="bizServiceBlockAppl"/>
+                    </iterate>
+                </if>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="add" noun="BlockBizService" semaphore="wait">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl"/>
+            <parameter name="contentFile" type="org.apache.commons.fileupload.FileItem"/>
+            <parameter name="isUpdated" type="Boolean"/>
+        </in-parameters>
+        <actions>
+            <if condition="isUpdated">
+                <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockServiceAppl">
+                    <field-map field-name="blockId" from="blockId"/>
+                    <field-map field-name="serviceId" from="serviceId"/>
+                    <field-map field-name="thruDate" from="null"/>
+                </entity-find-one>
+                <set field="newPageBlockServiceAppl" from="pageBlockServiceAppl.cloneValue()"/>
+                <entity-set value-field="newPageBlockServiceAppl" include="nonpk" set-if-empty="true"/>
+                <if condition="contentFile == null || contentFile.size == 0">
+                    <set field="newPageBlockServiceAppl.serviceLogo" from="pageBlockServiceAppl.serviceLogo"/>
+                    <set field="newPageBlockServiceAppl.serviceLogoLocation" from="pageBlockServiceAppl.serviceLogoLocation"/>
+                </if>
+                <if condition="newPageBlockServiceAppl == pageBlockServiceAppl">
+                    <return type="info" message="无数据更新"/>
+                </if>
+                <if condition="contentFile != null &amp;&amp; contentFile.size &gt; 0">
+                    <set field="filename" from="contentFile.getName()"/>
+                    <set field="contentRoot" from="ec.user.getPreference('mantle.cdn.bucket') ?: 'oss://pubresource'"/>
+                    <set field="contentLocation" value="${contentRoot}/h5Management/service_${serviceId}/${filename}"/>
+                    <set field="docRr" from="ec.resource.getLocationReference(contentLocation)"/>
+                    <script>
+                        fileStream = contentFile.getInputStream()
+                        try { docRr.putStream(fileStream) } finally { fileStream.close() }
+                    </script>
+                    <set field="pageBlockServiceAppl.serviceLogo" value="${docRr.getUrl().toString()}"/>
+                    <set field="pageBlockServiceAppl.serviceLogoLocation" from="contentLocation"/>
+                </if>
+                <set field="serviceLogo" from="null"/>
+                <entity-set value-field="pageBlockServiceAppl"/>
+                <entity-update value-field="pageBlockServiceAppl"/>
+                <else>
+                    <!-- 校验该区块是否已添加该服务，不可重复添加 -->
+                    <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="existBlockServiceList">
+                        <econdition field-name="blockId" from="blockId"/>
+                        <econdition field-name="serviceId" from="serviceId"/>
+                        <econdition field-name="thruDate" operator="is-null"/>
+                    </entity-find>
+                    <if condition="existBlockServiceList != null &amp;&amp; existBlockServiceList.size() != 0">
+                        <return type="warning" message="该数据已存在"/>
+                    </if>
+                    <!-- 校验区块与服务之间的循环依赖（只做一层校验） -->
+                    <entity-find entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" list="bizServiceBlockList">
+                        <econdition field-name="serviceId" from="serviceId"/>
+                    </entity-find>
+                    <if condition="bizServiceBlockList != null &amp;&amp; bizServiceBlockList.size() != 0">
+                        <set field="bizServiceLinkBlockList" from="bizServiceBlockList.blockId as List"/>
+                        <if condition="bizServiceLinkBlockList.contains(blockId)">
+                            <return type="warning" message="该服务已关联该区块，不能再设为区块内服务，请重新选择"/>
+                        </if>
+                    </if>
+                    <!-- 计算该区块服务顺序号 -->
+                    <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" limit="1" list="maxOrderNumberList">
+                        <econdition field-name="blockId" from="blockId"/>
+                        <econdition field-name="thruDate" operator="is-null"/>
+                        <order-by field-name="-orderNumber"/>
+                    </entity-find>
+                    <if condition="maxOrderNumberList != null &amp;&amp; maxOrderNumberList[0] != null">
+                        <set field="orderNumber" from="Long.valueOf(maxOrderNumberList[0].orderNumber)+1"/>
+                        <else>
+                            <set field="orderNumber" value="1"/>
+                        </else>
+                    </if>
+                    <set field="filename" from="contentFile.getName()"/>
+                    <set field="contentRoot" from="ec.user.getPreference('mantle.cdn.bucket') ?: 'oss://pubresource'"/>
+                    <set field="contentLocation" value="${contentRoot}/h5Management/service_${serviceId}/${filename}"/>
+                    <set field="docRr" from="ec.resource.getLocationReference(contentLocation)"/>
+                    <script>
+                        fileStream = contentFile.getInputStream()
+                        try { docRr.putStream(fileStream) } finally { fileStream.close() }
+                    </script>
+                    <set field="serviceLogo" value="${docRr.getUrl().toString()}"/>
+                    <service-call name="create#mantle.mfexcel.h5page.PageBlockServiceAppl"
+                                  in-map="context+[serviceLogoLocation:contentLocation,enabled:'Y',freeze:'N']"
+                                  out-map="context"/>
+                </else>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="delete" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="pageBlockService">
+                <set field="pageBlockService.thruDate" from="ec.user.nowTimestamp"/>
+                <entity-update value-field="pageBlockService"/>
+                <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="behindPageBlockServiceList">
+                    <econdition field-name="blockId" from="blockId"/>
+                    <econdition field-name="thruDate" from="null"/>
+                    <econdition field-name="orderNumber" operator="greater" from="pageBlockService.orderNumber"/>
+                </entity-find>
+                <iterate list="behindPageBlockServiceList" entry="behindPageBlockService">
+                    <set field="behindPageBlockService.orderNumber"
+                         from="Long.valueOf(behindPageBlockService.orderNumber)-1"/>
+                    <entity-update value-field="behindPageBlockService"/>
+                </iterate>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="enable" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+            <parameter name="enabled" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="pageBlockService">
+                <set field="pageBlockService.enabled" from="enabled"/>
+                <entity-update value-field="pageBlockService"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="freeze" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+            <parameter name="freeze" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="pageBlockService">
+                <set field="pageBlockService.freeze" from="freeze"/>
+                <entity-update value-field="pageBlockService"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="ascend" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="!pageBlockService">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <if condition="pageBlockService.orderNumber == '1'">
+                <return type="warning" message="参数错误，已在第一位，不可升序"/>
+            </if>
+            <set field="pageBlockService.orderNumber" from="Long.valueOf(pageBlockService.orderNumber)-1"/>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" limit="1"
+                         list="prePageBlockServiceList">
+                <econdition field-name="blockId" from="blockId"/>
+                <econdition field-name="orderNumber" from="pageBlockService.orderNumber"/>
+                <econdition field-name="thruDate" from="null"/>
+            </entity-find>
+            <set field="prePageBlockService" from="prePageBlockServiceList[0]"/>
+            <set field="prePageBlockService.orderNumber" from="Long.valueOf(pageBlockService.orderNumber)+1"/>
+            <entity-update value-field="pageBlockService"/>
+            <entity-update value-field="prePageBlockService"/>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="descend" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="!pageBlockService">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" limit="1"
+                         list="nextPageBlockServiceList">
+                <econdition field-name="blockId" from="blockId"/>
+                <econdition field-name="orderNumber" from="Long.valueOf(pageBlockService.orderNumber)+1"/>
+                <econdition field-name="thruDate" from="null"/>
+            </entity-find>
+            <if condition="nextPageBlockServiceList != null &amp;&amp; nextPageBlockServiceList.size() > 0">
+                <set field="nextPageBlockService" from="nextPageBlockServiceList[0]"/>
+                <set field="pageBlockService.orderNumber" from="Long.valueOf(pageBlockService.orderNumber)+1"/>
+                <set field="nextPageBlockService.orderNumber" from="Long.valueOf(pageBlockService.orderNumber)-1"/>
+                <entity-update value-field="pageBlockService"/>
+                <entity-update value-field="nextPageBlockService"/>
+                <else>
+                    <return type="warning" message="已在最后一位，不可降序"/>
+                </else>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="setTop" noun="BlockBizService">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="serviceId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" value-field="pageBlockService">
+                <field-map field-name="blockId" from="blockId"/>
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="thruDate" from="null"/>
+            </entity-find-one>
+            <if condition="!pageBlockService">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <if condition="pageBlockService.orderNumber == '1'">
+                <return type="warning" message="已在第一位，不可置顶"/>
+            </if>
+            <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="frontPageBlockServiceList">
+                <econdition field-name="blockId" from="blockId"/>
+                <econdition field-name="thruDate" from="null"/>
+                <econdition field-name="orderNumber" operator="less" from="pageBlockService.orderNumber"/>
+            </entity-find>
+            <iterate list="frontPageBlockServiceList" entry="frontPageBlockService">
+                <set field="frontPageBlockService.orderNumber"
+                     from="Long.valueOf(frontPageBlockService.orderNumber)+1"/>
+                <entity-update value-field="frontPageBlockService"/>
+            </iterate>
+            <set field="pageBlockService.orderNumber" value="1"/>
+            <entity-update value-field="pageBlockService"/>
+            <service-call name="moqui.h5Management.H5ManagementServices.set#PageBlockIsIssued"
+                          in-map="[blockId:blockId,isIssued:'N']" out-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="set" noun="PageBlockIsIssued">
+        <in-parameters>
+            <parameter name="blockId" required="true"/>
+            <parameter name="isIssued" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="pageBlock">
+                <field-map field-name="blockId" from="blockId"/>
+            </entity-find-one>
+            <if condition="!pageBlock">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <set field="pageBlock.isIssued" from="isIssued"/>
+            <entity-update value-field="pageBlock"/>
+        </actions>
+    </service>
+
+    <service verb="edit" noun="BizServiceIndicator" semaphore="wait">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.BizServiceIndicator"/>
+        </in-parameters>
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="existBSIndicatorList">
+                <econdition field-name="indicatorName" from="indicatorName"/>
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+                <econdition field-name="indicatorId" from="indicatorId" operator="not-equals" ignore-if-empty="true"/>
+            </entity-find>
+            <if condition="existBSIndicatorList != null &amp;&amp; existBSIndicatorList[0] != null">
+                <return type="warning" message="该名称已存在"/>
+            </if>
+            <if condition="indicatorId">
+                <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceIndicator" value-field="origBSIndicator"/>
+                <set field="newBSIndicator" from="origBSIndicator.cloneValue()"/>
+                <entity-set value-field="newBSIndicator" include="nonpk" set-if-empty="true"/>
+                <if condition="newBSIndicator == origBSIndicator">
+                    <return type="info" message="无数据更新"/>
+                </if>
+                <service-call name="update#mantle.mfexcel.h5page.BizServiceIndicator" in-map="context+[isIssued:'N']"
+                              out-map="context"/>
+                <else>
+                    <service-call name="create#mantle.mfexcel.h5page.BizServiceIndicator"
+                                  in-map="context+[enabled:'Y',isIssued:'N',phaseStatusId:'VtAlpha']"
+                                  out-map="context"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="enable" noun="BizServiceIndicator">
+        <in-parameters>
+            <parameter name="indicatorId" required="true"/>
+            <parameter name="enabled" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceIndicator" value-field="bsIndicator">
+                <field-map field-name="indicatorId" from="indicatorId"/>
+            </entity-find-one>
+            <if condition="bsIndicator">
+                <set field="bsIndicator.enabled" from="enabled"/>
+                <entity-update value-field="bsIndicator"/>
+                <service-call name="moqui.h5Management.H5ManagementServices.set#BizServiceIndicatorIsIssued"
+                              in-map="[indicatorId:indicatorId,isIssued:'N']" out-map="context"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="multiDisable" noun="BizServiceIndicator">
+        <in-parameters>
+            <parameter name="indicatorIdList" type="List"/>
+        </in-parameters>
+        <actions>
+            <if condition="indicatorIdList">
+                <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="bsIndicatorList">
+                    <econdition field-name="indicatorId" from="indicatorIdList" operator="in"/>
+                    <econdition field-name="enabled" value="Y"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <iterate list="bsIndicatorList" entry="bsIndicator">
+                    <set field="bsIndicator.enabled" value="N"/>
+                    <set field="bsIndicator.isIssued" value="N"/>
+                    <entity-update value-field="bsIndicator"/>
+                </iterate>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="allDisable" noun="BizServiceIndicator">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="bsIndicatorList">
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="enabled" value="Y"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <iterate list="bsIndicatorList" entry="bsIndicator">
+                <set field="bsIndicator.enabled" value="N"/>
+                <set field="bsIndicator.isIssued" value="N"/>
+                <entity-update value-field="bsIndicator"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="multiRelease" noun="BizServiceIndicator">
+        <in-parameters>
+            <parameter name="indicatorIdList" type="List" required="true"/>
+        </in-parameters>
+        <actions>
+            <iterate list="indicatorIdList" entry="indicatorId">
+                <service-call name="moqui.h5Management.H5ManagementServices.release#BizServiceIndicator"
+                              in-map="[indicatorId:indicatorId]"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="allRelease" noun="BizServiceIndicator">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="bsIndicatorList">
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="isIssued" value="N"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <iterate list="bsIndicatorList" entry="bsIndicator">
+                <service-call name="moqui.h5Management.H5ManagementServices.release#BizServiceIndicator"
+                              in-map="[indicatorId:bsIndicator.indicatorId]"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="release" noun="BizServiceIndicator">
+        <in-parameters>
+            <parameter name="indicatorId" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceIndicator" value-field="bsIndicator">
+                <field-map field-name="indicatorId" from="indicatorId"/>
+            </entity-find-one>
+            <if condition="!bsIndicator">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <if condition="bsIndicator.isIssued == 'N'">
+                <!-- 校验关联的服务已经发布 -->
+                <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                    <field-map field-name="serviceId" from="bsIndicator.serviceId"/>
+                </entity-find-one>
+                <if condition="bizService.isIssued != 'Y'">
+                    <return error="true" type="warning" message="服务标识[${bsIndicator.indicatorName}]关联的服务未发布，服务编码${bizService.pseudoId}"/>
+                </if>
+                <set field="bsIndicator.isIssued" value="Y"/>
+                <entity-update value-field="bsIndicator"/>
+                <!-- 将已发布记录失效 -->
+                <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="releasedBSIndicatorList">
+                    <econdition field-name="sourceId" from="indicatorId"/>
+                    <econdition field-name="phaseStatusId" value="VtRelease"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <iterate list="releasedBSIndicatorList" entry="releasedBSIndicator">
+                    <set field="releasedBSIndicator.thruDate" from="ec.user.nowTimestamp"/>
+                    <entity-update value-field="releasedBSIndicator"/>
+                </iterate>
+                <!-- 查找关联的服务在外网对应的数据 -->
+                <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="releasedBSList" limit="1">
+                    <econdition field-name="sourceId" from="bsIndicator.serviceId"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <set field="releasedBizService" from="releasedBSList[0]"/>
+                <!-- 生成服务标识外网数据 -->
+                <set field="bsIndicator.indicatorId" from="null"/>
+                <set field="bsIndicator.phaseStatusId" value="VtRelease"/>
+                <set field="bsIndicator.serviceId" from="releasedBizService.serviceId"/>
+                <set field="bsIndicator.sourceId" from="indicatorId"/>
+                <set field="bsIndicator.createdByUserId" from="ec.user.userId"/>
+                <set field="bsIndicator.createdStamp" from="ec.user.nowTimestamp"/>
+                <set field="bsIndicator.lastUpdatedByUserId" from="ec.user.userId"/>
+                <entity-sequenced-id-primary value-field="bsIndicator"/>
+                <entity-create value-field="bsIndicator"/>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="set" noun="BizServiceIndicatorIsIssued">
+        <in-parameters>
+            <parameter name="indicatorId" required="true"/>
+            <parameter name="isIssued" required="true"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceIndicator" value-field="bsIndicator">
+                <field-map field-name="indicatorId" from="indicatorId"/>
+            </entity-find-one>
+            <if condition="!bsIndicator">
+                <return type="warning" message="参数错误，数据不存在"/>
+            </if>
+            <set field="bsIndicator.isIssued" from="isIssued"/>
+            <entity-update value-field="bsIndicator"/>
+        </actions>
+    </service>
+
+    <service verb="add" noun="ServiceParam">
+        <in-parameters>
+            <parameter name="AddServiceParam"/>
+            <parameter name="serviceId"/>
+        </in-parameters>
+        <actions>
+            <actions>
+                <script>
+                    import com.fasterxml.jackson.databind.JsonNode
+                    import org.moqui.impl.context.ContextJavaUtil
+                    if(context.AddServiceParam){
+                    JsonNode jsonNode = ContextJavaUtil.jacksonMapper.readTree(AddServiceParam)
+                    AddServiceParam = ContextJavaUtil.jacksonMapper.treeToValue(jsonNode, List.class)
+                    }
+                </script>
+                <iterate list="AddServiceParam" entry="serviceParam">
+                    <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceParamAppl" value-field="serviceParamApp">
+                        <field-map field-name="serviceId" from="serviceId"/>
+                        <field-map field-name="configParamEnumId" from="serviceParam.enumId"/>
+                    </entity-find-one>
+                    <if condition="serviceParamApp != null">
+                        <return type="warning" error="true" message="添加错误，配置已存在"/>
+                    </if>
+                    <entity-make-value entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"
+                                       value-field="serviceParamApp"/>
+                    <set field="serviceParamApp.serviceId" from="serviceId"/>
+                    <set field="serviceParamApp.configParamEnumId" from="serviceParam.enumId"/>
+                    <set field="serviceParamApp.defaultValue" from="serviceParam.defaultValue"/>
+                    <entity-create value-field="serviceParamApp"/>
+                </iterate>
+                <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService"
+                              in-map="[serviceId:serviceId]"/>
+                <script>
+                    ec.web.sendJsonResponse([type:"success",messages:"添加成功",screenUrl:"/coapps/h5/ServiceManagement/PageServiceWhite/EditorService?serviceId=${serviceId}"])
+                </script>
+            </actions>
+        </actions>
+    </service>
+    <service verb="update" noun="ServiceParam">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceParamAppl" value-field="serviceParam"
+                             for-update="true">
+                <field-map field-name="serviceId" from="serviceId"/>
+                <field-map field-name="configParamEnumId" from="configParamEnumId"/>
+            </entity-find-one>
+
+            <if condition="serviceParam.defaultValue != defaultValue">
+                    <set field="serviceParam.defaultValue" from="defaultValue"></set>
+                    <entity-update value-field="serviceParam"/>
+                    <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService"
+                                  in-map="[serviceId:serviceId]"/>
+            </if>
+            <script>
+                ec.web.sendJsonResponse([type:"success",messages:"修改成功",screenUrl:"/coapps/h5/ServiceManagement/PageServiceWhite/EditorService?serviceId=${serviceId}"])
+            </script>
+        </actions>
+    </service>
+
+
+    <service verb="add" noun="ServiceBlock" semaphore="wait">
+        <in-parameters>
+            <parameter name="AddBlock"/>
+            <parameter name="serviceId"/>
+        </in-parameters>
+        <actions>
+            <actions>
+                <script>
+                    import com.fasterxml.jackson.databind.JsonNode
+                    import org.moqui.impl.context.ContextJavaUtil
+                    if(context.AddBlock){
+                    JsonNode jsonNode = ContextJavaUtil.jacksonMapper.readTree(AddBlock)
+                    AddBlock = ContextJavaUtil.jacksonMapper.treeToValue(jsonNode, List.class)
+                    }
+                </script>
+                <iterate list="AddBlock" entry="blockDetail">
+
+                    <entity-find-one entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" value-field="serviceBlock">
+                        <field-map field-name="blockId" from="blockDetail.blockId"/>
+                        <field-map field-name="serviceId" from="serviceId"/>
+                    </entity-find-one>
+
+                    <if condition="serviceBlock != null">
+                        <return type="warning" error="true" message="添加错误，配置已存在"/>
+                    </if>
+
+                    <service-call name="moqui.h5Management.H5ManagementServices.save#ServiceBlock"
+                                  in-map="[blockDetail:blockDetail,blockServiceIds:blockDetail.serviceIds,serviceId:serviceId]"/>
+                </iterate>
+
+                <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService"
+                              in-map="[serviceId:serviceId]"/>
+
+                <script>
+                    ec.web.sendJsonResponse([type:"success",messages:"添加成功",screenUrl:"/coapps/h5/ServiceManagement/PageServiceWhite/EditorService?serviceId=${serviceId}"])
+                </script>
+            </actions>
+        </actions>
+    </service>
+    <service verb="save" noun="ServiceBlock" semaphore="wait">
+        <in-parameters>
+            <parameter name="blockDetail" type="Object"/>
+            <parameter name="serviceId"/>
+            <parameter name="blockServiceIds" type="List"/>
+        </in-parameters>
+        <actions>
+            <if condition="serviceId in blockServiceIds">
+                <return type="warning" message="区块中存在相同的服务：${blockDetail.name}"/>
+            </if>
+            <entity-make-value entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" value-field="serviceBlock"/>
+            <set field="serviceBlock.serviceId" from="serviceId"/>
+            <set field="serviceBlock.blockId" from="blockDetail.blockId"/>
+            <entity-create value-field="serviceBlock"/>
+        </actions>
+    </service>
+
+    <service verb="update" noun="BizService">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.BizService"/>
+            <parameter name="appUrl"/>
+        </in-parameters>
+        <actions>
+            <if condition="!serviceDataTypeEnumId">
+                <set field="serviceDataTypeEnumId" value="APP"/>
+            </if>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="bizServiceLs">
+                <econditions combine="and">
+                    <econdition field-name="name" from="name"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                    <econdition field-name="serviceId" from="serviceId" operator="not-equals"/>
+                </econditions>
+            </entity-find>
+            <set field="phaseStatusId" value="VtAlpha"/>
+            <if condition="serviceDataTypeEnumId == 'URL'">
+                <if condition="!url">
+                    <return  type="warning" message="url不可为空"/>
+                </if>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="urlCounts">
+                    <econdition field-name="url"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                 <if condition="urlCounts &gt;0">
+                    <return type="warning" message="该url服务数据已存在"/>
+                </if>
+                <set field="appPackage" value=""/>
+            </if>
+            <if condition="serviceDataTypeEnumId == 'APP'">
+                <if condition="!appPackage">
+                    <return type="warning" message="包名不可为空"/>
+                </if>
+                <if condition="!appUrl">
+                    <return type="warning" message="默认下载链接不可为空"/>
+                </if>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="appPackageCounts">
+                    <econdition field-name="appPackage"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                <if condition="appPackageCounts &gt;0">
+                    <return type="warning" message="该App服务数据已存在"/>
+                </if>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="urlCounts">
+                    <econdition field-name="url" from="appUrl"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                <if condition="urlCounts &gt;0">
+                    <return type="warning" message="该url服务数据已存在"/>
+                </if>
+                <set field="url" from="appUrl"/>
+            </if>
+
+            <entity-find entity-name="mantle.mfexcel.h5page.BizService" limit="1" list="bizServiceLs" for-update="true">
+                <econdition field-name="serviceId" from="serviceId"/>
+                <econdition field-name="name" from="name"/>
+                <econdition field-name="industryEnumId" from="industryEnumId"/>
+                <econdition field-name="serviceTypeEnumId" from="serviceTypeEnumId"/>
+                <econdition field-name="vendorPartyId" from="vendorPartyId"/>
+                <econdition field-name="cooperationTypeEnumId" from="cooperationTypeEnumId"/>
+                <econdition field-name="businessTypeEnumId" from="businessTypeEnumId"/>
+                <econdition field-name="settlementMethodEnumId" from="settlementMethodEnumId"/>
+                <econdition field-name="settlementOrder" from="settlementOrder"/>
+                <econdition field-name="marketingTypeEnumId" from="marketingTypeEnumId"/>
+                <econdition field-name="url" from="appUrl"/>
+                <econdition field-name="remark" from="remark"/>
+            </entity-find>
+            <if condition="!bizServiceLs">
+                    <set field="isIssued" value="N"/>
+                    <service-call name="update#mantle.mfexcel.h5page.BizService" in-map="context"/>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService"
+                          in-map="[serviceId:serviceId]"/>
+        </actions>
+    </service>
+
+    <service verb="add" noun="BizService" semaphore="wait">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.mfexcel.h5page.BizService"/>
+            <parameter name="appUrl"/>
+        </in-parameters>
+        <actions>
+            <if condition="!serviceDataTypeEnumId">
+                <set field="serviceDataTypeEnumId" value="APP"/>
+            </if>
+            <set field="phaseStatusId" value="VtAlpha"/>
+            <if condition="serviceDataTypeEnumId == 'URL'">
+                <if condition="!url">
+                    <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"url不可为空"]);
+                        return
+                    </script>
+                </if>
+                <set field="appPackage" value=""/>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="urlCounts">
+                    <econdition field-name="url"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                <if condition="urlCounts &gt;0">
+                <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"该url服务数据已存在"]);
+                        return
+                    </script>
+                </if>
+            </if>
+            <if condition="serviceDataTypeEnumId == 'APP'">
+                <if condition="!appPackage">
+                    <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"包名不可为空"]);
+                        return
+                    </script>
+                </if>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="appPackageCounts">
+                    <econdition field-name="appPackage"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                <if condition="appPackageCounts &gt;0">
+                    <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"该App服务数据已存在"]);
+                        return
+                    </script>
+                </if>
+
+                <if condition="!appUrl">
+                    <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"url不可为空"]);
+                        return
+                    </script>
+                </if>
+                <entity-find-count entity-name="mantle.mfexcel.h5page.BizService" count-field="urlCounts">
+                    <econdition field-name="url" from="appUrl"/>
+                    <econdition field-name="serviceId" operator="not-equals"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                </entity-find-count>
+                <if condition="urlCounts &gt;0">
+                <script>
+                        ec.web.sendJsonResponse([type:"warning",messages:"该url服务数据已存在"]);
+                        return
+                    </script>
+                </if>
+                <set field="url" from="appUrl"/>
+            </if>
+            <service-call name="moqui.h5Management.H5ManagementServices.get#BizServiceCode" out-map="context"/>
+            <set field="pseudoId" from="bizCode"/>
+            <set field="enabled" value="Y"/>
+            <set field="isIssued" value="N"/>
+            <service-call name="create#mantle.mfexcel.h5page.BizService" in-map="context" out-map="context"/>
+            <script>
+                ec.web.sendJsonResponse([type:"success",messages:"保存成功",screenUrl:"/coapps/h5/ServiceManagement/PageServiceWhite/EditorService?serviceId=${serviceId}"])
+                return
+            </script>
+        </actions>
+    </service>
+
+    <service verb="allDisable" noun="BizService">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="pageServiceList">
+                <econdition field-name="enabled" value="Y"/>
+                <econdition field-name="thruDate" operator="is-null"/>
+            </entity-find>
+            <iterate list="pageServiceList" entry="bizService">
+                <set field="bizService.enabled" value="N"/>
+                <set field="bizService.isIssued" value="N"/>
+                <entity-update value-field="bizService"/>
+                <!--全部停用时更新编辑人等信息-->
+                <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService" in-map="[serviceId:bizService.serviceId]"/>
+            </iterate>
+        </actions>
+    </service>
+
+    <service verb="multiDisable" noun="BizService">
+        <in-parameters>
+            <parameter name="bizServiceIdList" type="List"/>
+        </in-parameters>
+        <actions>
+            <if condition="bizServiceIdList">
+                <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="pageServiceList">
+                    <econdition field-name="serviceId" from="bizServiceIdList" operator="in"/>
+                    <econdition field-name="enabled" value="Y"/>
+                    <econdition field-name="thruDate" operator="is-null"/>
+                </entity-find>
+                <iterate list="pageServiceList" entry="pageService">
+                    <set field="pageService.enabled" value="N"/>
+                    <set field="pageService.isIssued" value="N"/>
+                    <entity-update value-field="pageService"/>
+                    <!--批量停用时更新编辑人等信息-->
+                    <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService" in-map="[serviceId:pageService.serviceId]"/>
+                </iterate>
+            </if>
+        </actions>
+    </service>
+
+    <!--    修改动态参数、区块时，更新 service时间、发布状态-->
+    <service verb="updateService" noun="BizService">
+        <in-parameters>
+            <parameter name="serviceId"/>
+            <parameter name="lastUpdatedStamp"/>
+            <parameter name="lastUpdatedByUserId"/>
+            <!--发布状态标志位，若点击已发布或编辑页面未修改字段则将flag置为‘Y’-->
+            <parameter name="flag" default-value="N"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="bizService">
+                <field-map field-name="serviceId"/>
+            </entity-find-one>
+            <if condition="bizService">
+                <set field="bizService.isIssued" from="flag"/>
+                <set field="bizService.lastUpdatedStamp" value="${ec.user.nowTimestamp}"/>
+                <set field="bizService.lastUpdatedByUserId" value="${ec.user.userId}"/>
+                <entity-update value-field="bizService"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <service verb="multiIssued" noun="BizService">
+        <in-parameters>
+            <parameter name="bizServiceIdList" type="List"/>
+        </in-parameters>
+        <actions>
+            <if condition="bizServiceIdList">
+                <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="bizServiceIdList">
+                    <econdition field-name="serviceId" from="bizServiceIdList" operator="in"/>
+                    <econdition field-name="isIssued" value="N"/>
+                    <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                    <select-field field-name="serviceId"/>
+                </entity-find>
+                <iterate list="bizServiceIdList" entry="bizService">
+                    <service-call name="moqui.h5Management.H5ManagementServices.issued#BizService"
+                                  in-map="[serviceId:bizService.serviceId]"/>
+                </iterate>
+                <!--批量发布-->
+            </if>
+        </actions>
+    </service>
+
+    <service verb="allIssued" noun="BizService">
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.h5page.BizService" list="bizServiceIdList">
+                <econdition field-name="phaseStatusId" value="VtAlpha"/>
+                <econdition field-name="isIssued" value="N"/>
+                <select-field field-name="serviceId"/>
+            </entity-find>
+            <log message="bizServiceIdList=== ${bizServiceIdList}"/>
+            <if condition="bizServiceIdList">
+                <iterate list="bizServiceIdList" entry="bizService">
+                    <log message="serviceId=== ${bizService.serviceId}"/>
+                    <service-call name="moqui.h5Management.H5ManagementServices.issued#BizService"
+                                  in-map="[serviceId:bizService.serviceId]"/>
+                </iterate>
+            </if>
+        </actions>
+    </service>
+
+
+    <service verb="issued" noun="BizService">
+        <in-parameters>
+            <parameter name="serviceId"/>
+        </in-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="whiteBizService">
+                <field-map field-name="serviceId"/>
+                <field-map field-name="isIssued" value="N"/>
+                <field-map field-name="phaseStatusId" value="VtAlpha"/>
+            </entity-find-one>
+
+            <if condition="whiteBizService">
+                <entity-find-one entity-name="mantle.mfexcel.h5page.BizService" value-field="hisBizService">
+                    <field-map field-name="sourceId" from="serviceId"/>
+                    <field-map field-name="phaseStatusId" value="VtRelease"/>
+                    <field-map field-name="thruDate" from="null"/>
+                </entity-find-one>
+                <!-- 新增正式数据-->
+                <entity-make-value entity-name="mantle.mfexcel.h5page.BizService" value-field="relBizService"/>
+                <set field="relBizService.name" from="whiteBizService.name"/>
+                <set field="relBizService.pseudoId" from="whiteBizService.pseudoId"/>
+                <set field="relBizService.url" from="whiteBizService.url"/>
+                <set field="relBizService.industryEnumId" from="whiteBizService.industryEnumId"/>
+                <set field="relBizService.cooperationTypeEnumId" from="whiteBizService.cooperationTypeEnumId"/>
+                <set field="relBizService.businessTypeEnumId" from="whiteBizService.businessTypeEnumId"/>
+                <set field="relBizService.vendorPartyId" from="whiteBizService.vendorPartyId"/>
+                <set field="relBizService.serviceTypeEnumId" from="whiteBizService.serviceTypeEnumId"/>
+                <set field="relBizService.settlementMethodEnumId"
+                     from="whiteBizService.settlementMethodEnumId"/>
+                <set field="relBizService.marketingTypeEnumId" from="whiteBizService.marketingTypeEnumId"/>
+                <set field="relBizService.phaseStatusId" value="VtRelease"/>
+                <set field="relBizService.enabled" from="whiteBizService.enabled"/>
+                <set field="relBizService.isIssued" from="whiteBizService.isIssued"/>
+                <set field="relBizService.sourceId" from="whiteBizService.serviceId"/>
+                <set field="relBizService.settlementOrder" from="whiteBizService.settlementOrder"/>
+                <set field="relBizService.remark" from="whiteBizService.remark"/>
+                <set field="relBizService.serviceDataTypeEnumId" from="whiteBizService.serviceDataTypeEnumId"/>
+                <set field="relBizService.appPackage" from="whiteBizService.appPackage"/>
+                <entity-sequenced-id-primary value-field="relBizService"/>
+                <entity-create value-field="relBizService"/>
+
+                <!-- 区块关联表 -->
+                <entity-find entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl" list="whiteServiceBlock">
+                    <econdition field-name="serviceId" from="whiteBizService.serviceId"/>
+                </entity-find>
+
+                <!-- 白名单有区块，判断区块是否都已经发布，并且新增正式区块-->
+                <if condition=" whiteServiceBlock != null &amp;&amp; whiteServiceBlock.size() !=0 ">
+                    <entity-find entity-name="mantle.mfexcel.h5page.PageBlock" list="pageBlockLs">
+                        <econdition field-name="blockId" from="whiteServiceBlock.blockId" operator="in"/>
+                    </entity-find>
+
+                    <if condition="pageBlockLs != null &amp;&amp; pageBlockLs.size() != 0">
+                        <iterate list="pageBlockLs" entry="pageBlock">
+                            <!--  获取已发布区块的id，新增正式区块关联数据-->
+                            <log message="pageBlock__ ${pageBlock}"/>
+                            <entity-find-one entity-name="mantle.mfexcel.h5page.PageBlock" value-field="relPageBlock">
+                                <field-map field-name="sourceId" from="pageBlock.blockId"/>
+                                <field-map field-name="thruDate" from="null"/>
+                            </entity-find-one>
+                            <if condition="!relPageBlock">
+                                <return error="true" type="warning" message="参数错误，${whiteBizService.pseudoId}服务的区块: ${pageBlock.name} 未发布"/>
+                            </if>
+                            <entity-make-value entity-name="mantle.mfexcel.h5page.BizServiceBlockAppl"
+                                               value-field="relServiceBlock"/>
+                            <set field="relServiceBlock.serviceId" from="relBizService.serviceId"/>
+                            <set field="relServiceBlock.blockId" from="relPageBlock.blockId"/>
+                            <set field="relServiceBlock.enabled" from="relPageBlock.enabled"/>
+                            <entity-create value-field="relServiceBlock"/>
+                        </iterate>
+                    </if>
+                </if>
+                <!-- 动态参数-->
+                <entity-find entity-name="mantle.mfexcel.h5page.BizServiceParamAppl" list="whiteServiceParamLs">
+                    <econdition field-name="serviceId" from="whiteBizService.serviceId"/>
+                </entity-find>
+                <if condition=" whiteServiceParamLs != null &amp;&amp; whiteServiceParamLs.size() !=0 ">
+                    <iterate list="whiteServiceParamLs" entry="whiteServiceParam">
+                        <entity-make-value entity-name="mantle.mfexcel.h5page.BizServiceParamAppl"
+                                           value-field="relServiceParam"/>
+                        <set field="relServiceParam.serviceId" from="relBizService.serviceId"/>
+                        <set field="relServiceParam.configParamEnumId" from="whiteServiceParam.configParamEnumId"/>
+                        <set field="relServiceParam.defaultValue" from="whiteServiceParam.defaultValue"/>
+                        <set field="relServiceParam.enabled" from="whiteServiceParam.enabled"/>
+                        <entity-create value-field="relServiceParam"/>
+                    </iterate>
+                </if>
+                <if condition="hisBizService">
+                    <!-- 存在正式数据，修改为历史数据-->
+                    <set field="hisBizService.thruDate" from="ec.user.nowTimestamp"/>
+                    <entity-update value-field="hisBizService"/>
+
+                    <!-- 更新标识关联的serviceId-->
+                    <log message="更新标识关联的serviceId--- ${hisBizService.serviceId}"/>
+                    <entity-find entity-name="mantle.mfexcel.h5page.BizServiceIndicator" list="indicatorLs">
+                        <econdition field-name="serviceId" from="hisBizService.serviceId"/>
+                        <econdition field-name="thruDate" operator="is-null"/>
+                    </entity-find>
+                    <if condition="indicatorLs != null &amp;&amp; indicatorLs.size() !=0">
+                        <iterate list="indicatorLs" entry="indicator">
+                            <entity-make-value entity-name="mantle.mfexcel.h5page.BizServiceIndicator"
+                                               value-field="newIndicator"/>
+                            <set field="newIndicator.indicatorName" from="indicator.indicatorName"/>
+                            <set field="newIndicator.indicatorDesc" from="indicator.indicatorDesc"/>
+                            <set field="newIndicator.serviceId" from="relBizService.serviceId"/>
+                            <set field="newIndicator.thruDate" from="indicator.thruDate"/>
+                            <set field="newIndicator.phaseStatusId" from="indicator.phaseStatusId"/>
+                            <set field="newIndicator.enabled" from="indicator.enabled"/>
+                            <set field="newIndicator.isIssued" from="indicator.isIssued"/>
+                            <set field="newIndicator.sourceId" from="indicator.sourceId"/>
+                            <entity-sequenced-id-primary value-field="newIndicator"/>
+                            <entity-create value-field="newIndicator"/>
+
+                            <set field="indicator.thruDate" from="ec.user.nowTimestamp"/>
+                            <entity-update value-field="indicator"/>
+                        </iterate>
+                    </if>
+
+                    <!-- 查询外网关联该服务的区块 -->
+                    <entity-find entity-name="mantle.mfexcel.h5page.PageBlockServiceAppl" list="blockServiceList">
+                        <econdition field-name="serviceId" from="hisBizService.serviceId"/>
+                        <econdition field-name="thruDate" operator="is-null"/>
+                    </entity-find>
+                    <iterate list="blockServiceList" entry="blockService">
+                        <!-- 将旧的关联关系失效 -->
+                        <set field="blockService.thruDate" from="ec.user.nowTimestamp"/>
+                        <entity-update value-field="blockService"/>
+
+                        <!-- 生成新的关联关系 -->
+                        <set field="blockService.fromDate" from="ec.user.nowTimestamp"/>
+                        <set field="blockService.thruDate" from="null"/>
+                        <set field="blockService.serviceId" from="relBizService.serviceId"/>
+                        <entity-create value-field="blockService"/>
+                    </iterate>
+                </if>
+                <!--                更新service表-->
+                <set field="whiteBizService.isIssued" value="Y"/>
+                <log message="----------${whiteBizService}"/>
+                <entity-update value-field="whiteBizService"/>
+                <service-call name="moqui.h5Management.H5ManagementServices.updateService#BizService" in-map="[serviceId:serviceId,flag:'Y']"/>
+                <else>
+                    <return type="warning" message="参数错误，数据不存在"/>
+                </else>
+            </if>
+        </actions>
+    </service>
+
+    <!-- 获取服务编码 -->
+    <service verb="get" noun="BizServiceCode">
+        <out-parameters>
+            <parameter name="bizCode"/>
+        </out-parameters>
+        <actions>
+            <entity-find-one entity-name="mantle.mfexcel.common.BizSequenceCodeMethod" value-field="method">
+                <field-map field-name="methodName" value="biz_service_code"/>
+            </entity-find-one>
+            <set field="paramMap" from="[:]"/>
+            <script>
+                String paramStr = paramMap.inspect()
+            </script>
+            <service-call name="moqui.coCommon.BizSequenceCodeServices.store#BizCode"
+                          in-map="[paramStr:[methodId:method.methodId].inspect()]"/>
+
+            <service-call name="moqui.coCommon.BizSequenceCodeServices.create#BizCode"
+                          in-map="[paramStr:paramStr,methodId:method.methodId]"
+                          out-map="result"/>
+            <set field="bizCode" from="result.codeResult"/>
+        </actions>
+    </service>
+</services>
