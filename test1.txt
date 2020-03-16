@@ -1,0 +1,20 @@
+打法指南：https://wap.gamersky.com/gl/Content-1237249.html
+
+
+配置文件目录：\Steam\userdata\455638042\632360\remote\UserProfiles\**
+修改的时候不要启动steam
+
+
+月球币：<coins>……</coins>
+根据需要自行修改
+
+
+ 成就（新角色，新技能..）：<achievementsList>……</achievementsList>
+
+替换下面这段，可以解锁喷毒的那个角色除外 其他现有的角色的技能和皮肤：
+<achievementsList> KillEliteMonster CompleteTeleporter Discover10UniqueTier1 MaxHealingShrine CompleteThreeStages StayAlive1 LoopOnce FailShrineChance TotalMoneyCollected Discover5Equipment RepeatFirstTeleporter MajorMultikill HardHitter 5Times KillTotalEnemies CompleteUnknownEnding Complete30StagesCareer RepeatedlyDuplicateItems TotalDronesRepaired CompleteMultiBossShrine FindDevilAltar FindTimedChest CompletePrismaticTrial KillBossQuick LogCollector CompleteTeleporterWithoutInjury AttackSpeed MoveSpeed CarryLunarItems FreeMage HardEliteBossKill Complete20Stages KillElementalLemurians ChargeTeleporterWhileNearDeath SuicideHermitCrabs RescueTreebot CompleteThreeStagesWithoutHealing FindUniqueNewtStatues KillGoldTitanInOneCycle MultiCombatShrine UseThreePortals KillElitesMilestone Die5Times CommandoKillOverloadingWorm ToolbotGuardTeleporter ToolbotKillImpBossWithBfg MercDontTouchGround MercCompleteTrialWithFullHealth HuntressMaintainFullHealthOnFrozenWall HuntressCollectCrowbars EngiArmy TreebotLowHealthTeleporter MageFastBoss MageAirborneMultiKill MageMultiKill EngiKillBossQuick TreebotDunkClayBoss LoaderSpeedRun CommandoNonLunarEndurance CommandoClearGameMonsoon ToolbotClearGameMonsoon HuntressClearGameMonsoon MageClearGameMonsoon MercClearGameMonsoon LoaderClearGameMonsoon TreebotClearGameMonsoon DefeatSuperRoboBallBoss KillBossQuantityInRun BurnToDeath</achievementsList>
+
+
+
+
+
